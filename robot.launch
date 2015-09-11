@@ -1,0 +1,6 @@
+<launch>
+	<!-- Loads the URDF model to the param server -->
+	<param name="robot_description" textfile="/home/marcus/rbdl_test/model2.urdf"/>
+	<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" />
+</launch>
