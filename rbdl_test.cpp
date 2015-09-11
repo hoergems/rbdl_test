@@ -27,23 +27,23 @@ int RbdlTest::test() {
 	VectorNd Q = VectorNd::Zero (model->dof_count);
 	VectorNd QDot = VectorNd::Zero (model->dof_count);
 	VectorNd Tau = VectorNd::Zero (model->dof_count);
-	Tau[0] = 0.005;
-	//Tau[2] = 0.005;
+	Tau[1] = -0.365336;
+	Tau[2] = -0.17102;
 	VectorNd QDDot = VectorNd::Zero (model->dof_count);
 	
 	ForwardDynamics(*model, Q, QDot, Tau, QDDot);
 
 	std::cout << Q.transpose() << std::endl;
-	std::cout << QDDot.transpose() << std::endl;
+	std::cout << QDDot << std::endl;
 	
-	/**VectorNd Q = VectorNd::Zero(model->dof_count);
-	VectorNd QDot = VectorNd::Zero(model->dof_count);
-	VectorNd QDDot = VectorNd::Zero(model->dof_count);
-	VectorNd Tau = VectorNd::Zero(model->dof_count);
+	Q = VectorNd::Zero(model->dof_count);
+	QDot = VectorNd::Zero(model->dof_count);
+	QDDot = VectorNd::Zero(model->dof_count);
+	Tau = VectorNd::Zero(model->dof_count);
 	
 	InverseDynamics(*model, Q, QDot, QDDot, Tau);
 	
-	cout << "torques: " << Tau << endl;*/
+	cout << "torques: " << Tau << endl;
 
 	delete model;
 
