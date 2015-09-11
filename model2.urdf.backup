@@ -1,0 +1,134 @@
+<?xml version="1.0" ?>
+<robot name="manipulator">
+	<link name="world"/>
+	
+	<joint name="world_base_link" type="fixed">
+		<parent link="world"/>
+		<child link="base_link"/>
+		<origin xyz="0 0 0" rpy="0 0 0" />
+        <axis xyz="0 0 1" />
+	</joint>
+		
+	<link name="base_link">
+		<inertial>
+			<origin xyz="-7.0772E-05 0.022175 0.00069238" rpy="0 0 0" />
+			<mass value="0.86768" />
+				<inertia ixx="0.004313" ixy="7.3571E-06" ixz="-4.1802E-06"
+						 iyy="0.0063166" iyz="1.4712E-05" izz="0.0027301" />
+		</inertial>
+		<visual>
+			<origin xyz="0 0 0" rpy="0 0 0" />
+			<geometry>
+				<box size="0.25 0.12 0.05"/>
+			</geometry>
+			<material name="">
+				<color rgba="0.75294 0.75294 0.75294 1" />
+			</material>
+		</visual>
+		<collision>
+			<origin xyz="0 0 0" rpy="0 0 0" />
+			<geometry>
+				<box size="0.25 0.12 0.05"/>
+			</geometry>
+		</collision>
+	</link>
+	
+	<joint name="AL_coxa_joint" type="revolute">
+    	<origin rpy="0.0 0.0 0.785398163397" xyz="0.125 0.06 0"/>
+    	<parent link="base_link" />
+    	<child link="AL_coxa_link" />
+    	<axis xyz="0 0 1" />
+    	<limit lower="-1.8326" upper="1.8326" effort="3.1" velocity="7" />
+    </joint>
+	
+	<link name="AL_coxa_link">
+		<inertial>
+			<origin xyz="0.0028255 0.016487 -0.038239"
+					rpy="0 0 0" />
+			<mass value="0.054025" />
+			<inertia ixx="4.2638E-05" ixy="-1.8883E-07" ixz="-4.2377E-06"
+					 iyy="5.3271E-05" iyz="2.555E-06"
+        	         izz="2.8624E-05" />
+		</inertial>
+		<visual>
+			<origin rpy="0.0 0.0 0.0" xyz="-0.0265 0 0"/>
+			<geometry>
+				<box size="0.053 0.01 0.01"/>
+			</geometry>
+			<material name="">
+				<color rgba="0.75294 0.75294 0.75294 1" />
+			</material>
+		</visual>
+		<collision>
+			<origin rpy="0.0 0.0 0.0" xyz="-0.0265 0 0"/>
+			<geometry>
+				<box size="0.053 0.01 0.01"/>
+			</geometry>
+    	</collision>
+    </link>
+    
+	<link name="AL_femur_link">
+		<inertial>
+			<origin xyz="0.041 0 0" rpy="0 0 0" />
+			<mass value="0.18426" />
+			<inertia ixx="0.00033345" ixy="-6.5254E-08" ixz="-1.5302E-19"
+				     iyy="4.8055E-05" iyz="-2.3378E-19"
+				     izz="0.0003165" />
+		</inertial>
+		<visual>
+			<origin rpy="0.0 0.0 0" xyz="0.041 0 0"/>
+			<geometry>
+				<box size="0.082 0.01 0.01"/>
+			</geometry>
+			<material name="">
+				<color rgba="0.75294 0.75294 0.75294 1" />
+			</material>
+		</visual>
+		<collision>
+			<origin rpy="0.0 0.0 0" xyz="0.041 0 0"/>
+			<geometry>
+				<box size="0.082 0.01 0.01"/>
+			</geometry>
+		</collision>
+	</link>
+	
+	<joint name="AL_femur_joint" type="revolute">
+		<origin rpy="-1.57079632679489661923 0.0 0.0" xyz="0.053 0 0"/>
+		<parent link="AL_coxa_link" />
+		<child link="AL_femur_link" />
+		<axis xyz="0 0 1" />
+		<limit lower="-1.9199" upper="1.9199" effort="10" velocity="5.5" />
+	</joint>
+	
+	<link name="AL_tibia_link">
+		<inertial>
+			<origin xyz="0.2025 0 0" rpy="0 0 0" />
+			<mass value="0.08176" />
+			<inertia ixx="0.00033345" ixy="-6.5254E-08" ixz="-1.5302E-19"
+				     iyy="4.8055E-05" iyz="-2.3378E-19"
+				     izz="0.0003165" />
+		</inertial>
+		<visual>
+			<origin rpy="0.0 0.0 0.0" xyz="0.2025 0 0"/>
+			<geometry>
+				<box size="0.405 0.01 0.01"/>
+			</geometry>			
+		</visual>
+		<collision>
+			<origin rpy="0.0 0.0 0.0" xyz="0.2025 0 0"/>
+			<geometry>
+				<box size="0.405 0.01 0.01"/>
+			</geometry>
+		</collision>
+	</link>
+	
+	<joint name="AL_tibia_joint" type="revolute">
+		<origin rpy="0.0 0.0 0.0" xyz="0.082 0 0"/>
+		<parent link="AL_femur_link" />
+		<child link="AL_tibia_link" />
+		<axis xyz="0 0 1" />
+		<limit lower="-1.9199" upper="1.9199" effort="10" velocity="5.5" />
+	</joint>
+  
+
+</robot>
