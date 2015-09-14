@@ -12,6 +12,7 @@
 #include <ompl/base/State.h>
 #include <ompl/base/StateSpace.h>
 #include <ompl/base/spaces/RealVectorStateSpace.h>
+#include <ompl/base/ScopedState.h>
 #include <ompl/base/ProblemDefinition.h>
 
 
