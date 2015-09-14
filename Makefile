@@ -6,14 +6,23 @@ CC=g++
 CFLAGS=-g -c -std=c++11
 
 INCLUDEFLAGS=-I/usr/local/include/rbdl/ -I/usr/include/eigen3
-LDFLAGS=-lrbdl -lrbdl_urdfreader
+LDFLAGS=-lrbdl -lrbdl_urdfreader -lompl
 
-all: rbdl clean
+all: rbdl ompl_test clean
 
 rbdl: rbdl.o
 	$(CC) $(INCLUDEFLAGS) $^ -o $@ $(LDFLAGS)
 	
+ompl_test: state_propagator.o ompl_test.o
+	$(CC) $(INCLUDEFLAGS) $^ -o $@ $(LDFLAGS)
+	
 rbdl.o: rbdl_test.cpp
+	$(CC) $(CFLAGS) $(INCLUDEFLAGS) $< -o $@
+	
+state_propagator.o: state_propagator.cpp
+	$(CC) $(CFLAGS) $(INCLUDEFLAGS) $< -o $@
+	
+ompl_test.o: ompl_control.cpp
 	$(CC) $(CFLAGS) $(INCLUDEFLAGS) $< -o $@
 	
 clean:
