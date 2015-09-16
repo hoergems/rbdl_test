@@ -1,6 +1,7 @@
 #ifndef OMPL_CONTROL_TEST_HPP_
 #define OMPL_CONTROL_TEST_HPP_
 #include <iostream>
+#include <boost/timer.hpp>
 #include "state_propagator.hpp"
 #include "goal.hpp"
 
@@ -14,6 +15,7 @@
 #include <ompl/base/Goal.h>
 #include <ompl/base/StateSpace.h>
 #include <ompl/base/spaces/RealVectorStateSpace.h>
+#include <ompl/base/spaces/RealVectorBounds.h>
 #include <ompl/base/ScopedState.h>
 #include <ompl/base/ProblemDefinition.h>
 
@@ -22,7 +24,9 @@ namespace shared {
 
     class OMPLControlTest {
         public:
-        	OMPLControlTest(unsigned int &state_space_dimension,
+        	OMPLControlTest(const char *model_file,
+                                double &control_duration,
+                                unsigned int &state_space_dimension,
                                 unsigned int &control_space_dimension);
         	
         	bool isValid(const ompl::base::State *state);
@@ -30,6 +34,11 @@ namespace shared {
         	void test();
 
         private:
+                // The filename of the urdf model
+                const char *model_file_;
+
+                double control_duration_;
+
                 // Dimension of the state space
                 unsigned int state_space_dimension_;
 
@@ -38,6 +47,9 @@ namespace shared {
 
                 // The state space
                 ompl::base::StateSpacePtr state_space_;
+
+                // The bounds of the state space
+                ompl::base::RealVectorBounds state_space_bounds_;
 
                 // The control space
                 ompl::control::ControlSpacePtr control_space_;
@@ -53,6 +65,8 @@ namespace shared {
 
                 // Solve the motion planning problem
                 bool solve_();
+
+                bool setup_bounds_();
     };
 }
 
