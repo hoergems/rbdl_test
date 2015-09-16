@@ -21,6 +21,8 @@ void StatePropagator::propagate(const ompl::base::State *state,
                                 const ompl::control::Control *control, 
                                 const double duration, 
                                 ompl::base::State *result) const {
+    unsigned int dim = space_information_->getStateSpace()->getDimension() / 2;
+   
     // The input state vector
     VectorNd q = VectorNd::Zero(model_->dof_count);
     
@@ -28,24 +30,43 @@ void StatePropagator::propagate(const ompl::base::State *state,
     VectorNd qDot = VectorNd::Zero(model_->dof_count);
     
     // The input torque vector
-    VectorNd tau = VectorNd::Zero (model_->dof_count);   
-    for (unsigned int i = 0; i < space_information_->getStateSpace()->getDimension(); i++) {
+    VectorNd tau = VectorNd::Zero (model_->dof_count);    
+    for (unsigned int i = 0; i < space_information_->getStateSpace()->getDimension() / 2; i++) {
         q[i] = state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i];
         tau[i] = control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[i];
-    }
-    
+        qDot[i] = state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i + dim];
+    }   
+    cout << "tau " << tau << endl;
+    cout << "duration " << duration << endl;
     // The resulting acceleration vector
     VectorNd qDDot = VectorNd::Zero (model_->dof_count);
     
     // Calculate the forward dynamics and store the result in qDDot
     ForwardDynamics(*model_, q, qDot, tau, qDDot);
-    
-    //Double integration to receive the resulting state vector from qDDot
+    cout << endl;
+    cout << "resulting acceleration " << tau << endl;
+
+    // Double integration to receive the resulting state vector from qDDot
+    // This should be replaced by a physics engine
     double qDot_res = 0.0;    
-    for (unsigned int i = 0; i < space_information_->getStateSpace()->getDimension(); i++) { 
-        qDot_res = duration * qDDot[i];        
-        result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i] = duration * qDot_res;
-    }                        
+    for (unsigned int i = 0; i < space_information_->getStateSpace()->getDimension() / 2; i++) { 
+        qDot_res = duration * qDDot[i];
+        result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i] = duration * qDot_res; 
+        result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i + dim] = qDot_res;
+    }
+    cout << "State was: ";
+    for (unsigned int i = 0; i < space_information_->getStateSpace()->getDimension(); i++) {
+        cout << " " << state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i];
+    }
+    cout << endl;
+
+    cout << "result ";
+    for (unsigned int i = 0; i < space_information_->getStateSpace()->getDimension(); i++) {
+        cout << " " << result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i];
+    }
+    cout << endl;
+    sleep(2);
+                          
 }
 
 bool StatePropagator::canPropagateBackward() const{
