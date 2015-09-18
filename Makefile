@@ -5,8 +5,8 @@ CC=g++
 # options I'll pass to the compiler.
 CFLAGS=-g -c -std=c++11
 
-INCLUDEFLAGS=-I/usr/local/include/rbdl/ -I/usr/include/eigen3
-LDFLAGS=-lrbdl -lrbdl_urdfreader -lompl -Wl,-rpath /usr/local/lib/
+INCLUDEFLAGS=-I/usr/local/include/rbdl/ -I/usr/include/eigen3 -I/usr/inclue/boost/ -I/usr/local/include/openrave-0.9
+LDFLAGS=-lrbdl -lrbdl_urdfreader -lopenrave0.9 -lopenrave0.9-core -lompl -Wl,-rpath /usr/local/lib/ -lboost_system -lboost_thread
 
 all: rbdl ompl_test clean
 

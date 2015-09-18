@@ -2,8 +2,11 @@
 #define OMPL_CONTROL_TEST_HPP_
 #include <iostream>
 #include <boost/timer.hpp>
+#include <boost/thread.hpp>
 #include "state_propagator.hpp"
 #include "goal.hpp"
+#include <openrave-core.h>
+#include <openrave/environment.h>
 
 #include <ompl/control/ControlSpace.h>
 #include <ompl/control/Control.h>
@@ -21,6 +24,8 @@
 
 
 namespace shared {
+
+    
 
     class OMPLControlTest {
         public:

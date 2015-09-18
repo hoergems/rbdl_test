@@ -22,6 +22,8 @@ OMPLControlTest::OMPLControlTest(const char *model_file,
     planner_(new ompl::control::RRT(space_information_)) 
 {
     setup_bounds_();
+    OpenRAVE::EnvironmentBasePtr env(OpenRAVE::RaveCreateEnvironment());
+
 }
 
 bool OMPLControlTest::setup_bounds_() {
