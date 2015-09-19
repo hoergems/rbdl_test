@@ -68,6 +68,9 @@ namespace shared {
                 // The planner
                 ompl::base::PlannerPtr planner_;
 
+                // The OpenRAVE environmen
+                OpenRAVE::EnvironmentBasePtr environment_;
+
                 // Solve the motion planning problem
                 bool solve_();
 

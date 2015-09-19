@@ -19,11 +19,27 @@ OMPLControlTest::OMPLControlTest(const char *model_file,
                                                              control_space_dimension_)),
     space_information_(new ompl::control::SpaceInformation(state_space_, control_space_)),
     problem_definition_(new ompl::base::ProblemDefinition(space_information_)),
-    planner_(new ompl::control::RRT(space_information_)) 
+    planner_(new ompl::control::RRT(space_information_)),
+    environment_(OpenRAVE::RaveCreateEnvironment()) 
 {
     setup_bounds_();
-    OpenRAVE::EnvironmentBasePtr env(OpenRAVE::RaveCreateEnvironment());
+    OpenRAVE::RaveInitialize(true);
+    environment_->StopSimulation();
+    environment_->Load("./phantomx_exp2.dae");
+    std::vector<OpenRAVE::RobotBasePtr> robots;
+    environment_->GetRobots(robots);
+    OpenRAVE::RobotBasePtr robot_ = robots[0];        
+    
+    const std::vector<OpenRAVE::dReal> vJointValues({0.0, 0.0, 0.0});
+    robot_->SetDOFValues(vJointValues);
 
+    const std::string engine = "ode";
+    OpenRAVE::PhysicsEngineBasePtr physics_engine_ = OpenRAVE::RaveCreatePhysicsEngine(environment_, engine);
+    const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});
+    physics_engine_->SetGravity(gravity);
+    environment_->SetPhysicsEngine(physics_engine_);
+
+    	
 }
 
 bool OMPLControlTest::setup_bounds_() {
