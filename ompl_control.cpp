@@ -159,14 +159,14 @@ void OMPLControlTest::test() {
         std::vector<ompl::control::Control*> solution_controls_(solution_path_->getControls());
         for (size_t i = 0; i < solution_states_.size(); i++) {
             cout << "State: ";
-            for (size_t j = 0; j < 6; j++) {
+            for (size_t j = 0; j < state_space_dimension_; j++) {
                 cout << solution_states_[i]->as<ompl::base::RealVectorStateSpace::StateType>()->values[j] << ", ";
             }
             cout << endl;
             
             if (i < solution_states_.size() - 1) {
                 cout << "Control: ";
-                for (size_t j = 0; j < 3; j++) {
+                for (size_t j = 0; j < state_space_dimension_ / 2; j++) {
                     cout << solution_controls_[i]->as<ompl::control::RealVectorControlSpace::ControlType>()->values[j] << ", ";
                 }
                 cout << endl;
