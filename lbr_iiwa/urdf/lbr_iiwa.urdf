@@ -64,14 +64,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://lbr_iiwa_description/meshes/link_0.stl"/>
+        <mesh filename="/home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/link_0.stl"/>
       </geometry>
       <material name="Grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://lbr_iiwa_description/meshes/coarse/link_0.stl"/>
+        <mesh filename="/home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/coarse/link_0.stl"/>
       </geometry>
       <material name="Grey"/>
     </collision>
@@ -104,14 +104,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://lbr_iiwa_description/meshes/link_1.stl"/>
+        <mesh filename="/home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/link_1.stl"/>
       </geometry>
       <material name="Orange"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://lbr_iiwa_description/meshes/coarse/link_1.stl"/>
+        <mesh filename="/home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/coarse/link_1.stl"/>
       </geometry>
       <material name="Orange"/>
     </collision>
@@ -138,14 +138,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://lbr_iiwa_description/meshes/link_2.stl"/>
+        <mesh filename="/home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/link_2.stl"/>
       </geometry>
       <material name="Orange"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://lbr_iiwa_description/meshes/coarse/link_2.stl"/>
+        <mesh filename="/home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/coarse/link_2.stl"/>
       </geometry>
       <material name="Orange"/>
     </collision>
@@ -172,14 +172,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://lbr_iiwa_description/meshes/link_3.stl"/>
+        <mesh filename="/home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/link_3.stl"/>
       </geometry>
       <material name="Orange"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://lbr_iiwa_description/meshes/coarse/link_3.stl"/>
+        <mesh filename="/home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/coarse/link_3.stl"/>
       </geometry>
       <material name="Orange"/>
     </collision>
@@ -206,14 +206,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://lbr_iiwa_description/meshes/link_4.stl"/>
+        <mesh filename="/home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/link_4.stl"/>
       </geometry>
       <material name="Orange"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://lbr_iiwa_description/meshes/coarse/link_4.stl"/>
+        <mesh filename="/home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/coarse/link_4.stl"/>
       </geometry>
       <material name="Orange"/>
     </collision>
@@ -240,14 +240,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://lbr_iiwa_description/meshes/link_5.stl"/>
+        <mesh filename="/home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/link_5.stl"/>
       </geometry>
       <material name="Orange"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://lbr_iiwa_description/meshes/coarse/link_5.stl"/>
+        <mesh filename="/home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/coarse/link_5.stl"/>
       </geometry>
       <material name="Orange"/>
     </collision>
@@ -274,14 +274,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://lbr_iiwa_description/meshes/link_6.stl"/>
+        <mesh filename="/home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/link_6.stl"/>
       </geometry>
       <material name="Orange"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://lbr_iiwa_description/meshes/coarse/link_6.stl"/>
+        <mesh filename="/home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/coarse/link_6.stl"/>
       </geometry>
       <material name="Orange"/>
     </collision>
@@ -308,14 +308,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://lbr_iiwa_description/meshes/link_7.stl"/>
+        <mesh filename="/home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/link_7.stl"/>
       </geometry>
       <material name="Grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://lbr_iiwa_description/meshes/coarse/link_7.stl"/>
+        <mesh filename="/home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/coarse/link_7.stl"/>
       </geometry>
       <material name="Grey"/>
     </collision>
@@ -372,70 +372,70 @@
   <transmission name="lbr_iiwa_tran_1">
     <type>transmission_interface/SimpleTransmission</type>
     <joint name="lbr_iiwa_joint_1">
-      <hardwareInterface>EffortJointController</hardwareInterface>
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
     </joint>
     <actuator name="lbr_iiwa_motor_1">
-      <hardwareInterface>EffortJointController</hardwareInterface>
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
       <mechanicalReduction>1</mechanicalReduction>
     </actuator>
   </transmission>
   <transmission name="lbr_iiwa_tran_2">
     <type>transmission_interface/SimpleTransmission</type>
     <joint name="lbr_iiwa_joint_2">
-      <hardwareInterface>EffortJointController</hardwareInterface>
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
     </joint>
     <actuator name="lbr_iiwa_motor_2">
-      <hardwareInterface>EffortJointController</hardwareInterface>
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
       <mechanicalReduction>1</mechanicalReduction>
     </actuator>
   </transmission>
   <transmission name="lbr_iiwa_tran_3">
     <type>transmission_interface/SimpleTransmission</type>
     <joint name="lbr_iiwa_joint_3">
-      <hardwareInterface>EffortJointController</hardwareInterface>
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
     </joint>
     <actuator name="lbr_iiwa_motor_3">
-      <hardwareInterface>EffortJointController</hardwareInterface>
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
       <mechanicalReduction>1</mechanicalReduction>
     </actuator>
   </transmission>
   <transmission name="lbr_iiwa_tran_4">
     <type>transmission_interface/SimpleTransmission</type>
     <joint name="lbr_iiwa_joint_4">
-      <hardwareInterface>EffortJointController</hardwareInterface>
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
     </joint>
     <actuator name="lbr_iiwa_motor_4">
-      <hardwareInterface>EffortJointController</hardwareInterface>
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
       <mechanicalReduction>1</mechanicalReduction>
     </actuator>
   </transmission>
   <transmission name="lbr_iiwa_tran_5">
     <type>transmission_interface/SimpleTransmission</type>
     <joint name="lbr_iiwa_joint_5">
-      <hardwareInterface>EffortJointController</hardwareInterface>
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
     </joint>
     <actuator name="lbr_iiwa_motor_5">
-      <hardwareInterface>EffortJointController</hardwareInterface>
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
       <mechanicalReduction>1</mechanicalReduction>
     </actuator>
   </transmission>
   <transmission name="lbr_iiwa_tran_6">
     <type>transmission_interface/SimpleTransmission</type>
     <joint name="lbr_iiwa_joint_6">
-      <hardwareInterface>EffortJointController</hardwareInterface>
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
     </joint>
     <actuator name="lbr_iiwa_motor_6">
-      <hardwareInterface>EffortJointController</hardwareInterface>
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
       <mechanicalReduction>1</mechanicalReduction>
     </actuator>
   </transmission>
   <transmission name="lbr_iiwa_tran_7">
     <type>transmission_interface/SimpleTransmission</type>
     <joint name="lbr_iiwa_joint_7">
-      <hardwareInterface>EffortJointController</hardwareInterface>
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
     </joint>
     <actuator name="lbr_iiwa_motor_7">
-      <hardwareInterface>EffortJointController</hardwareInterface>
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
       <mechanicalReduction>1</mechanicalReduction>
     </actuator>
   </transmission>

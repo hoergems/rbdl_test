@@ -76,7 +76,7 @@ bool OMPLControlTest::setup_ompl_(OpenRAVE::RobotBasePtr &robot, double &simulat
         state_space_bounds_.setLow(i + state_space_dimension_ / 2, -joints[i]->GetMaxVel());
         state_space_bounds_.setHigh(i + state_space_dimension_ / 2, joints[i]->GetMaxVel());
     }
-    double torque_bounds = 0.5;
+    double torque_bounds = 0.3;
     
     state_space_->as<ompl::base::RealVectorStateSpace>()->setBounds(state_space_bounds_);
     ompl::base::RealVectorBounds control_bounds(control_space_dimension_);
@@ -87,7 +87,19 @@ bool OMPLControlTest::setup_ompl_(OpenRAVE::RobotBasePtr &robot, double &simulat
 }
 
 bool OMPLControlTest::isValid(const ompl::base::State *state) {
-    return state_space_->as<ompl::base::RealVectorStateSpace>()->satisfiesBounds(state);
+    bool valid = state_space_->as<ompl::base::RealVectorStateSpace>()->satisfiesBounds(state);
+    cout << "State valid: ";
+    for (unsigned int i = 0; i < state_space_dimension_; i++) {
+        cout << state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i] << " ";
+    }
+    if (valid) {
+        cout << "is valid";
+    }
+    else {
+        cout << "not valid";
+    }
+    cout << endl;
+    return valid;
 }
 
 bool OMPLControlTest::solve_() {
@@ -114,20 +126,13 @@ bool OMPLControlTest::solve_() {
 void OMPLControlTest::test() {
     // Set the start and goal state
     ompl::base::ScopedState<> start_state(state_space_);
-    start_state[0] = 0.0;
-    start_state[1] = 0.0;
-    start_state[2] = 0.0;
-    start_state[3] = 0.0;
-    start_state[4] = 0.0;
-    start_state[5] = 0.0;
-    
     ompl::base::ScopedState<> goal_state(state_space_);
-    goal_state[0] = 2.0;
-    goal_state[1] = 0.0;
-    goal_state[2] = 0.0;
-    goal_state[3] = 0.0;
-    goal_state[4] = 0.0;
-    goal_state[5] = 0.0;    
+    for (unsigned int i = 0; i < state_space_dimension_; i++) {
+        start_state[i] = 0.0;
+        goal_state[i] = 0.0;
+    }
+    
+    goal_state[0] = 1.0;
 
     const ompl::base::GoalPtr goal_ptr(new ManipulatorGoalState(space_information_, goal_state)); 
     
@@ -181,7 +186,7 @@ void OMPLControlTest::test() {
 int main(int argc, char** argv) {    
     double control_duration = 0.05;
     double simulation_step_size = 0.0005;
-    const std::string collada_model("./phantomx_exp2.dae");    
+    const std::string collada_model("./lbr_iiwa/urdf/lbr_iiwa.dae");    
     shared::OMPLControlTest ompl_test(collada_model,
                                       control_duration,
                                       simulation_step_size);
