@@ -4,8 +4,8 @@
 		<contributor>
 			<authoring_tool>URDF Collada Writer</authoring_tool>
 		</contributor>
-		<created>2015-09-18T17:18:51.000000</created>
-		<modified>2015-09-18T17:18:51.000000</modified>
+		<created>2015-09-22T16:07:46.000000</created>
+		<modified>2015-09-22T16:07:46.000000</modified>
 		<unit/>
 		<up_axis>Z_UP</up_axis>
 	</asset>
@@ -396,8 +396,8 @@
 					<revolute sid="axis0">
 						<axis>1 0 0</axis>
 						<limits>
-							<min>-150.0000012609945</min>
-							<max>150.0000012609945</max>
+							<min>-360.9634109324186</min>
+							<max>360.9634109324186</max>
 						</limits>
 					</revolute>
 				</joint>
@@ -423,8 +423,8 @@
 					<revolute sid="axis0">
 						<axis>1 0 0</axis>
 						<limits>
-							<min>-150.0000012609945</min>
-							<max>150.0000012609945</max>
+							<min>-360.9634109324186</min>
+							<max>360.9634109324186</max>
 						</limits>
 					</revolute>
 				</joint>
@@ -432,8 +432,8 @@
 					<revolute sid="axis0">
 						<axis>1 0 0</axis>
 						<limits>
-							<min>-150.0000012609945</min>
-							<max>150.0000012609945</max>
+							<min>-360.9634109324186</min>
+							<max>360.9634109324186</max>
 						</limits>
 					</revolute>
 				</joint>
@@ -614,10 +614,10 @@
 						</locked>
 						<limits>
 							<min>
-								<float>-150.0000012609945</float>
+								<float>-360.9634109324186</float>
 							</min>
 							<max>
-								<float>150.0000012609945</float>
+								<float>360.9634109324186</float>
 							</max>
 						</limits>
 					</axis_info>
@@ -662,10 +662,10 @@
 						</locked>
 						<limits>
 							<min>
-								<float>-150.0000012609945</float>
+								<float>-360.9634109324186</float>
 							</min>
 							<max>
-								<float>150.0000012609945</float>
+								<float>360.9634109324186</float>
 							</max>
 						</limits>
 					</axis_info>
@@ -678,10 +678,10 @@
 						</locked>
 						<limits>
 							<min>
-								<float>-150.0000012609945</float>
+								<float>-360.9634109324186</float>
 							</min>
 							<max>
-								<float>150.0000012609945</float>
+								<float>360.9634109324186</float>
 							</max>
 						</limits>
 					</axis_info>
