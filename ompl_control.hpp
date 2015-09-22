@@ -35,6 +35,8 @@ namespace shared {
         	OMPLControlTest(const std::string &collada_model,
                             double &control_duration,
                             double &simulation_step_size);
+                            
+            ~OMPLControlTest() { OpenRAVE::RaveDestroy(); }
         	
         	bool isValid(const ompl::base::State *state);
         	

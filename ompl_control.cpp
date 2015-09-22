@@ -76,7 +76,7 @@ bool OMPLControlTest::setup_ompl_(OpenRAVE::RobotBasePtr &robot, double &simulat
         state_space_bounds_.setLow(i + state_space_dimension_ / 2, -joints[i]->GetMaxVel());
         state_space_bounds_.setHigh(i + state_space_dimension_ / 2, joints[i]->GetMaxVel());
     }
-    double torque_bounds = 0.7;
+    double torque_bounds = 0.5;
     
     state_space_->as<ompl::base::RealVectorStateSpace>()->setBounds(state_space_bounds_);
     ompl::base::RealVectorBounds control_bounds(control_space_dimension_);
@@ -186,7 +186,7 @@ int main(int argc, char** argv) {
                                       control_duration,
                                       simulation_step_size);
     ompl_test.test();
-    OpenRAVE::RaveDestroy();
+    //OpenRAVE::RaveDestroy();
     return 0;
 }
 
