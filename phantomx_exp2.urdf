@@ -151,7 +151,7 @@
     <child link="c1_lf"/>
     <origin rpy="0 4.7123 2.356194490192345" xyz="0.1248 0.06164  0.001116"/>
     <axis xyz="1 0 0"/>
-    <limit effort="2.8" lower="-2.6179939" upper="2.6179939" velocity="5.6548668"/>
+    <limit effort="2.8" lower="-6.3" upper="6.3" velocity="5.6548668"/>
   </joint>
   <joint name="j_c2_lf" type="fixed">
     <parent link="c1_lf"/>
@@ -164,14 +164,14 @@
     <!--origin xyz="0 0 0" rpy=" 0 3.14159 3.14159" /-->
     <origin rpy="3.14159 0  0" xyz="0 0 0"/>
     <axis xyz="1 0 0"/>
-    <limit effort="2.8" lower="-2.6179939" upper="2.6179939" velocity="5.6548668"/>
+    <limit effort="2.8" lower="-6.3" upper="6.3" velocity="5.6548668"/>
   </joint>
   <joint name="j_tibia_lf" type="revolute">
     <parent link="thigh_lf"/>
     <child link="tibia_lf"/>
     <origin rpy="-1.5707 0 3.14159" xyz="0 -0.0645 -0.0145"/>
     <axis xyz="1 0 0"/>
-    <limit effort="2.8" lower="-2.6179939" upper="2.6179939" velocity="5.6548668"/>
+    <limit effort="2.8" lower="-6.3" upper="6.3" velocity="5.6548668"/>
   </joint>
   <transmission name="t_c1_lf">
     <type>transmission_interface/SimpleTransmission</type>

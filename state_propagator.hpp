@@ -11,12 +11,15 @@
 #include <ompl/base/State.h>
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 
+#include <openrave-core.h>
+#include <openrave/environment.h>
+
 namespace RBD = RigidBodyDynamics;
 
 namespace shared {
     class StatePropagator: public ompl::control::StatePropagator {
         public:
-            StatePropagator(const ompl::control::SpaceInformationPtr &si);
+            StatePropagator(const ompl::control::SpaceInformationPtr &si, double &simulation_step_size);
             
             void propagate(const ompl::base::State *state, 
                            const ompl::control::Control *control, 
@@ -32,17 +35,24 @@ namespace shared {
             
             bool canSteer() const;
             
-            bool setupModel(const char *model_file);
+            bool setupOpenRAVEEnvironment(OpenRAVE::EnvironmentBasePtr environment,
+                                          OpenRAVE::RobotBasePtr robot);
             
         private:
             // The OMPL spacei information associated with this state propagator
             const ompl::control::SpaceInformationPtr space_information_;
-        
-            // The robot model
-            RBD::Model* model_;
             
             // Determines if the robo model has been set up
-            bool model_setup_;   
+            bool model_setup_; 
+            
+            // The OpenRAVE environment
+            OpenRAVE::EnvironmentBasePtr environment_;
+            
+            // The robot model
+            OpenRAVE::RobotBasePtr robot_;
+            
+            // The simulation step size
+            double simulation_step_size_;  
     };
 
 }

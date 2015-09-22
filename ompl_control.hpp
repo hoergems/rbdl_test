@@ -21,6 +21,8 @@
 #include <ompl/base/spaces/RealVectorBounds.h>
 #include <ompl/base/ScopedState.h>
 #include <ompl/base/ProblemDefinition.h>
+//#include <ompl/base/StatePropagatorPtr.h>
+#include <ompl/control/StatePropagator.h>
 
 
 namespace shared {
@@ -30,9 +32,10 @@ namespace shared {
     class OMPLControlTest {
         public:
         	OMPLControlTest(const char *model_file,
-                                double &control_duration,
-                                unsigned int &state_space_dimension,
-                                unsigned int &control_space_dimension);
+                            double &control_duration,
+                            double &simulation_step_size,
+                            unsigned int &state_space_dimension,
+                            unsigned int &control_space_dimension);
         	
         	bool isValid(const ompl::base::State *state);
         	
@@ -67,14 +70,13 @@ namespace shared {
 
                 // The planner
                 ompl::base::PlannerPtr planner_;
-
-                // The OpenRAVE environmen
-                OpenRAVE::EnvironmentBasePtr environment_;
+                
+                ompl::control::StatePropagatorPtr state_propagator_;
 
                 // Solve the motion planning problem
                 bool solve_();
 
-                bool setup_bounds_();
+                bool setup_bounds_(OpenRAVE::RobotBasePtr &robot);
     };
 }
 

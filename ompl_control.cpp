@@ -7,6 +7,7 @@ namespace shared {
 
 OMPLControlTest::OMPLControlTest(const char *model_file,
                                  double &control_duration,
+                                 double &simulation_step_size,
                                  unsigned int &state_space_dimension,
                                  unsigned int &control_space_dimension):
     model_file_(model_file),
@@ -20,43 +21,52 @@ OMPLControlTest::OMPLControlTest(const char *model_file,
     space_information_(new ompl::control::SpaceInformation(state_space_, control_space_)),
     problem_definition_(new ompl::base::ProblemDefinition(space_information_)),
     planner_(new ompl::control::RRT(space_information_)),
-    environment_(OpenRAVE::RaveCreateEnvironment()) 
-{
-    setup_bounds_();
-    OpenRAVE::RaveInitialize(true);
-    environment_->StopSimulation();
-    environment_->Load("./phantomx_exp2.dae");
-    std::vector<OpenRAVE::RobotBasePtr> robots;
-    environment_->GetRobots(robots);
-    OpenRAVE::RobotBasePtr robot_ = robots[0];        
+    state_propagator_(new StatePropagator(space_information_, simulation_step_size))    
+{    
     
+    /***** Initialize OpenRAVE *****/
+    OpenRAVE::RaveInitialize(true);
+    OpenRAVE::EnvironmentBasePtr environment(OpenRAVE::RaveCreateEnvironment());     
+    environment->Load("./phantomx_exp2.dae");
+    environment->StopSimulation();
+    
+    std::vector<OpenRAVE::RobotBasePtr> robots;
+    environment->GetRobots(robots);
+    OpenRAVE::RobotBasePtr robot = robots[0];
+    
+    const std::vector<OpenRAVE::KinBody::JointPtr> joints(robot->GetJoints());
     const std::vector<OpenRAVE::dReal> vJointValues({0.0, 0.0, 0.0});
-    robot_->SetDOFValues(vJointValues);
-
+    robot->SetDOFValues(vJointValues);
+    
+    /***** Create the physics engine *****/
     const std::string engine = "ode";
-    OpenRAVE::PhysicsEngineBasePtr physics_engine_ = OpenRAVE::RaveCreatePhysicsEngine(environment_, engine);
+    OpenRAVE::PhysicsEngineBasePtr physics_engine_ = OpenRAVE::RaveCreatePhysicsEngine(environment, engine);
     const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});
     physics_engine_->SetGravity(gravity);
-    environment_->SetPhysicsEngine(physics_engine_);
-
-    	
+    environment->SetPhysicsEngine(physics_engine_);
+    
+    setup_bounds_(robot);
+    
+    boost::static_pointer_cast<StatePropagator>(state_propagator_)->setupOpenRAVEEnvironment(environment, robot);
 }
 
-bool OMPLControlTest::setup_bounds_() {
+bool OMPLControlTest::setup_bounds_(OpenRAVE::RobotBasePtr &robot) {
     // Set the lower bounds
     double vel_bound = M_PI;
-    double torque_bounds = 0.2;
-    state_space_bounds_.setLow(0, -2.0 * M_PI);
-    state_space_bounds_.setLow(1, -2.0 * M_PI);
-    state_space_bounds_.setLow(2, -2.0 * M_PI);
+    double torque_bounds = 0.1;
+    double state_bounds = 2.0 * M_PI;
+    
+    state_space_bounds_.setLow(0, -state_bounds);
+    state_space_bounds_.setLow(1, -state_bounds);
+    state_space_bounds_.setLow(2, -state_bounds);
     state_space_bounds_.setLow(3, -vel_bound);
     state_space_bounds_.setLow(4, -vel_bound);
     state_space_bounds_.setLow(5, -vel_bound);
 
     // Set the higher bounds
-    state_space_bounds_.setHigh(0, 2.0 * M_PI);
-    state_space_bounds_.setHigh(1, 2.0 * M_PI);
-    state_space_bounds_.setHigh(2, 2.0 * M_PI);
+    state_space_bounds_.setHigh(0, state_bounds);
+    state_space_bounds_.setHigh(1, state_bounds);
+    state_space_bounds_.setHigh(2, state_bounds);
     state_space_bounds_.setHigh(3, vel_bound);
     state_space_bounds_.setHigh(4, vel_bound);
     state_space_bounds_.setHigh(5, vel_bound);
@@ -66,7 +76,16 @@ bool OMPLControlTest::setup_bounds_() {
     ompl::base::RealVectorBounds control_bounds(control_space_dimension_);
     control_bounds.setLow(-torque_bounds);
     control_bounds.setHigh(torque_bounds);
-    control_space_->as<ompl::control::RealVectorControlSpace>()->setBounds(control_bounds); 
+    control_space_->as<ompl::control::RealVectorControlSpace>()->setBounds(control_bounds);
+    
+    
+    const std::vector<OpenRAVE::dReal> joint_angle_limits_lower({-state_bounds, -state_bounds, -state_bounds});
+    const std::vector<OpenRAVE::dReal> joint_angle_limits_upper({state_bounds, state_bounds, state_bounds});
+    const std::vector<OpenRAVE::dReal> velocity_limits({vel_bound, vel_bound, vel_bound});
+    
+    robot->SetDOFLimits(joint_angle_limits_lower, 
+                        joint_angle_limits_upper);
+    robot->SetDOFVelocityLimits(velocity_limits);    
     return true;
 }
 
@@ -105,8 +124,6 @@ void OMPLControlTest::test() {
     space_information_->setPropagationStepSize(control_duration_);
     
     // The state propagator
-    ompl::control::StatePropagatorPtr state_propagator_(new StatePropagator(space_information_));    
-    boost::static_pointer_cast<StatePropagator>(state_propagator_)->setupModel(model_file_);    
     space_information_->setStatePropagator(state_propagator_);
         
     planner_->as<ompl::control::RRT>()->setIntermediateStates(false);
@@ -122,7 +139,7 @@ void OMPLControlTest::test() {
     start_state[5] = 0.0;
     
     ompl::base::ScopedState<> goal_state(state_space_);
-    goal_state[0] = 0.5;
+    goal_state[0] = 1.0;
     goal_state[1] = 0.0;
     goal_state[2] = 0.0;
     goal_state[3] = 0.0;
@@ -154,14 +171,24 @@ void OMPLControlTest::test() {
         cout << endl;        
         boost::shared_ptr<ompl::control::PathControl> solution_path_ = 
             boost::static_pointer_cast<ompl::control::PathControl>(planner_solution.path_);        
-        cout << "Length of solution path " << solution_path_->length() << endl;
+        cout << "Length of solution path " << solution_path_->length() << endl << endl;
         std::vector<ompl::base::State*> solution_states_(solution_path_->getStates());
+        std::vector<ompl::control::Control*> solution_controls_(solution_path_->getControls());
         for (size_t i = 0; i < solution_states_.size(); i++) {
             cout << "State: ";
-            for (size_t j = 0; j < 3; j++) {
+            for (size_t j = 0; j < 6; j++) {
                 cout << solution_states_[i]->as<ompl::base::RealVectorStateSpace::StateType>()->values[j] << ", ";
             }
             cout << endl;
+            
+            if (i < solution_states_.size() - 1) {
+                cout << "Control: ";
+                for (size_t j = 0; j < 3; j++) {
+                    cout << solution_controls_[i]->as<ompl::control::RealVectorControlSpace::ControlType>()->values[j] << ", ";
+                }
+                cout << endl;
+            }
+            
         }
     }
 }
@@ -172,12 +199,15 @@ int main(int argc, char** argv) {
     unsigned int state_space_dimension = 6;
     unsigned int control_space_dimension = 3;
     double control_duration = 0.05;
-    const char *model_file("/home/hoe01h/catkin_ws/src/phantomx_description/urdf/phantomx_exp.urdf");
+    double simulation_step_size = 0.005;
+    const char *model_file("./phantomx_exp2.urdf");
     shared::OMPLControlTest ompl_test(model_file,
                                       control_duration,
+                                      simulation_step_size,
                                       state_space_dimension, 
                                       control_space_dimension);
     ompl_test.test();
+    OpenRAVE::RaveDestroy();
     return 0;
 }
 

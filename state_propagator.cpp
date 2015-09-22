@@ -8,11 +8,13 @@ using namespace RigidBodyDynamics::Math;
 
 namespace shared {
 
-StatePropagator::StatePropagator(const ompl::control::SpaceInformationPtr &si):
+StatePropagator::StatePropagator(const ompl::control::SpaceInformationPtr &si, double &simulation_step_size):
     ompl::control::StatePropagator(si),
-    space_information_(si),
-    model_(new RBD::Model()),
-    model_setup_(false) 
+    space_information_(si),    
+    model_setup_(false),
+    environment_(nullptr),
+    robot_(nullptr),
+    simulation_step_size_(simulation_step_size)
 {
     
 }
@@ -21,55 +23,88 @@ void StatePropagator::propagate(const ompl::base::State *state,
                                 const ompl::control::Control *control, 
                                 const double duration, 
                                 ompl::base::State *result) const {
+    unsigned int dim = space_information_->getStateSpace()->getDimension() / 2;
+                                
+    std::vector<OpenRAVE::dReal> lower;
+    std::vector<OpenRAVE::dReal> upper;
+    robot_->GetDOFLimits(lower, upper);
+    
+    cout << "lower limits: ";
+    for (unsigned int i = 0; i < dim; i++) {
+        cout << lower[i] << " " << endl;
+    }
+    cout << endl;
+    
+    cout << "upper limits: ";
+    for (unsigned int i = 0; i < dim; i++) {
+        cout << upper[i] << " " << endl;
+    }
+    cout << endl;
+                                
     cout << "State: ";
-    for (unsigned int i = 0; i < space_information_->getStateSpace()->getDimension(); i++) {
+    for (unsigned int i = 0; i < dim * 2.0; i++) {
         cout << " " << state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i];
     }
     cout << endl;
-
-    unsigned int dim = space_information_->getStateSpace()->getDimension() / 2;
-   
-    // The input state vector
-    VectorNd q = VectorNd::Zero(model_->dof_count);
+                                
+    std::vector<OpenRAVE::dReal> currentJointValuesTemp;
+    std::vector<OpenRAVE::dReal> currentJointVelocitiesTemp;
+    std::vector<OpenRAVE::dReal> torquesTemp;
     
-    // The input velocity vector 
-    VectorNd qDot = VectorNd::Zero(model_->dof_count);
     
-    // The input torque vector
-    VectorNd tau = VectorNd::Zero (model_->dof_count);    
-    for (unsigned int i = 0; i < space_information_->getStateSpace()->getDimension() / 2; i++) {
-        q[i] = state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i];
-        tau[i] = control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[i];
-        qDot[i] = state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i + dim];
-    }   
+    const std::vector<OpenRAVE::KinBody::JointPtr> joints(robot_->GetJoints());
     
-    cout << "tau " << tau << endl;
-    cout << "duration " << duration << endl;
-    // The resulting acceleration vector
-    VectorNd qDDot = VectorNd::Zero (model_->dof_count);
-    
-    // Calculate the forward dynamics and store the result in qDDot
-    ForwardDynamics(*model_, q, qDot, tau, qDDot);    
-    cout << "resulting acceleration " << qDDot << endl;
-
-    // Double integration to receive the resulting state vector from qDDot
-    // This should be replaced by a physics engine
-    double qDot_res = 0.0;    
-    for (unsigned int i = 0; i < space_information_->getStateSpace()->getDimension() / 2; i++) { 
-        qDot_res = duration * qDDot[i];
-        result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i] = 
-            state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i] + duration * qDot_res; 
-        result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i + dim] = qDot_res;
+    for (unsigned int i = 0; i < dim; i++) {
+        currentJointValuesTemp.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
+        currentJointVelocitiesTemp.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i + dim]);
+        torquesTemp.push_back(control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[i]);        
     }
-
+    
+    const std::vector<OpenRAVE::dReal> currentJointValues(currentJointValuesTemp);
+    const std::vector<OpenRAVE::dReal> currentJointVelocities(currentJointVelocitiesTemp);
+    
+    robot_->SetDOFValues(currentJointValues);
+    robot_->SetDOFVelocities(currentJointVelocities);
+    
+    //cout << "duration " << duration << endl;
+          
+    cout << "Torques: ";
+    for (size_t k = 0; k < joints.size(); k++) {
+       cout << torquesTemp[k] << " ";       
+    }
+    cout << endl;
+    //cout << "start sim time " << environment_->GetSimulationTime() * 1e-6 << endl;
+    int num_steps = duration / simulation_step_size_;
+    for (unsigned int i = 0; i < num_steps; i++) {
+        for (size_t k = 0; k < joints.size(); k++) {
+            const std::vector<OpenRAVE::dReal> torques({torquesTemp[k]});
+            joints[k]->AddTorque(torques);
+        }        
+        environment_->StepSimulation(simulation_step_size_);
+        environment_->StopSimulation();
+    }
+    
+    
+    //cout << "end sim time " << environment_->GetSimulationTime() * 1e-6 << endl;
+    
+    std::vector<OpenRAVE::dReal> newJointValues;
+    std::vector<OpenRAVE::dReal> newJointVelocities;
+    
+    robot_->GetDOFValues(newJointValues);
+    robot_->GetDOFVelocities(newJointVelocities);
+    
+    for (unsigned int i = 0; i < dim; i++) {
+        result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i] = newJointValues[i];
+        result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i + dim] = newJointVelocities[i];
+    }
+    
     cout << "result ";
-    for (unsigned int i = 0; i < space_information_->getStateSpace()->getDimension(); i++) {
+    for (unsigned int i = 0; i < 2 * dim; i++) {
         cout << " " << result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i];
     }
     cout << endl;
     cout << endl;
-    sleep(2);
-                          
+    //sleep(2);             
 }
 
 bool StatePropagator::canPropagateBackward() const{
@@ -87,15 +122,12 @@ bool StatePropagator::canSteer() const {
     return false;
 }
 
-bool StatePropagator::setupModel(const char *model_file) {
-    if (!Addons::URDFReadFromFile (model_file, model_, false)) {
-		std::cerr << "Error loading model ./model2.urdf" << std::endl;
-		abort();
-		return false;
-	}
-	
-	model_setup_ = true;         
-	return model_setup_;
+bool StatePropagator::setupOpenRAVEEnvironment(OpenRAVE::EnvironmentBasePtr environment,
+                                               OpenRAVE::RobotBasePtr robot) {
+    environment_ = environment;
+    robot_ = robot;
+    model_setup_ = true;
+    return model_setup_;
 }
 
 }
