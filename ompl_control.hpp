@@ -32,7 +32,7 @@ namespace shared {
 
     class OMPLControlTest {
         public:
-        	OMPLControlTest(const char *model_file,
+        	OMPLControlTest(const std::string &collada_model,
                             double &control_duration,
                             double &simulation_step_size);
         	
@@ -41,9 +41,6 @@ namespace shared {
         	void test();
 
         private:
-                // The filename of the urdf model
-                const char *model_file_;
-
                 double control_duration_;
 
                 // Dimension of the state space
@@ -74,8 +71,6 @@ namespace shared {
 
                 // Solve the motion planning problem
                 bool solve_();
-
-                bool setup_bounds_(OpenRAVE::RobotBasePtr &robot);
                 
                 bool setup_ompl_(OpenRAVE::RobotBasePtr &robot, double &simulation_step_size);
     };
