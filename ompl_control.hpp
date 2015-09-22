@@ -3,6 +3,7 @@
 #include <iostream>
 #include <boost/timer.hpp>
 #include <boost/thread.hpp>
+#include <boost/make_shared.hpp>
 #include "state_propagator.hpp"
 #include "goal.hpp"
 #include <openrave-core.h>
@@ -33,9 +34,7 @@ namespace shared {
         public:
         	OMPLControlTest(const char *model_file,
                             double &control_duration,
-                            double &simulation_step_size,
-                            unsigned int &state_space_dimension,
-                            unsigned int &control_space_dimension);
+                            double &simulation_step_size);
         	
         	bool isValid(const ompl::base::State *state);
         	
@@ -77,6 +76,8 @@ namespace shared {
                 bool solve_();
 
                 bool setup_bounds_(OpenRAVE::RobotBasePtr &robot);
+                
+                bool setup_ompl_(OpenRAVE::RobotBasePtr &robot, double &simulation_step_size);
     };
 }
 

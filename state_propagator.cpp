@@ -24,28 +24,33 @@ void StatePropagator::propagate(const ompl::base::State *state,
                                 const double duration, 
                                 ompl::base::State *result) const {
     unsigned int dim = space_information_->getStateSpace()->getDimension() / 2;
-                                
-    std::vector<OpenRAVE::dReal> lower;
-    std::vector<OpenRAVE::dReal> upper;
-    robot_->GetDOFLimits(lower, upper);
     
-    cout << "lower limits: ";
+    /**cout << "lower limits position: ";
     for (unsigned int i = 0; i < dim; i++) {
         cout << lower[i] << " " << endl;
     }
     cout << endl;
     
-    cout << "upper limits: ";
+    cout << "upper limits position: ";
     for (unsigned int i = 0; i < dim; i++) {
         cout << upper[i] << " " << endl;
     }
     cout << endl;
+    
+    std::vector<OpenRAVE::dReal> max_velocities;
+    robot_->GetDOFVelocityLimits(max_velocities);
+    cout << "velocity limit: "; 
+    for (unsigned int i = 0; i < dim; i++) {
+        cout << max_velocities[i] << " " << endl;
+    }
+    cout << endl;
+    
                                 
     cout << "State: ";
     for (unsigned int i = 0; i < dim * 2.0; i++) {
         cout << " " << state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i];
     }
-    cout << endl;
+    cout << endl;*/
                                 
     std::vector<OpenRAVE::dReal> currentJointValuesTemp;
     std::vector<OpenRAVE::dReal> currentJointVelocitiesTemp;
@@ -68,11 +73,11 @@ void StatePropagator::propagate(const ompl::base::State *state,
     
     //cout << "duration " << duration << endl;
           
-    cout << "Torques: ";
+    /**cout << "Torques: ";
     for (size_t k = 0; k < joints.size(); k++) {
        cout << torquesTemp[k] << " ";       
     }
-    cout << endl;
+    cout << endl;*/
     //cout << "start sim time " << environment_->GetSimulationTime() * 1e-6 << endl;
     int num_steps = duration / simulation_step_size_;
     for (unsigned int i = 0; i < num_steps; i++) {
@@ -98,13 +103,13 @@ void StatePropagator::propagate(const ompl::base::State *state,
         result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i + dim] = newJointVelocities[i];
     }
     
-    cout << "result ";
+    /**cout << "result ";
     for (unsigned int i = 0; i < 2 * dim; i++) {
         cout << " " << result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i];
     }
     cout << endl;
-    cout << endl;
-    //sleep(2);             
+    cout << endl;*/
+    //sleep(1);             
 }
 
 bool StatePropagator::canPropagateBackward() const{
