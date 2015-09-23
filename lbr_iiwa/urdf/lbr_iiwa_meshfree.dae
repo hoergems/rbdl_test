@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<COLLADA xmlns="http://www.collada.org/2008/03/COLLADASchema" version="1.5.0">
+	<asset>
+		<contributor>
+			<authoring_tool>OpenRAVE Collada Writer v0.3.5</authoring_tool>
+		</contributor>
+		<created>2015-09-23T19:58:19.000000</created>
+		<modified>2015-09-23T19:58:19.000000</modified>
+		<unit/>
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_visual_scenes id="vscenes">
+		<visual_scene id="vscene" name="lbr_iiwa_meshfree">
+			<node id="visual1" name="lbr_iiwa" sid="visual1">
+				<translate>0 0 0</translate>
+				<rotate>1 0 0 0</rotate>
+				<node sid="node0"/>
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<library_geometries id="geometries"/>
+	<library_effects id="effects"/>
+	<library_materials id="materials"/>
+	<library_nodes id="nodes"/>
+	<library_kinematics_models id="kmodels">
+		<kinematics_model id="kmodel1" name="lbr_iiwa">
+			<asset>
+				<subject>:Interface Author: Rosen Diankov
+
+Simplest robot possible that just passes the trajectories to the controller</subject>
+			</asset>
+			<technique_common/>
+			<extra type="interface_type">
+				<technique profile="OpenRAVE">
+					<interface type="robot">GenericRobot</interface>
+				</technique>
+			</extra>
+			<extra type="collision">
+				<technique profile="OpenRAVE"/>
+			</extra>
+		</kinematics_model>
+	</library_kinematics_models>
+	<library_articulated_systems id="asystems">
+		<articulated_system id="body1_kinematics">
+			<kinematics>
+				<instance_kinematics_model url="#kmodel1" sid="kmodel1_inst">
+					<newparam sid="body1_kinematics_kmodel1_inst">
+						<SIDREF>body1_kinematics/kmodel1_inst</SIDREF>
+					</newparam>
+				</instance_kinematics_model>
+				<technique_common/>
+			</kinematics>
+		</articulated_system>
+		<articulated_system id="body1_motion">
+			<motion>
+				<instance_articulated_system url="#body1_kinematics">
+					<newparam sid="body1_motion_kmodel1_inst">
+						<SIDREF>body1_kinematics/body1_kinematics_kmodel1_inst</SIDREF>
+					</newparam>
+				</instance_articulated_system>
+				<technique_common/>
+			</motion>
+			<extra type="interface_type">
+				<technique profile="OpenRAVE">
+					<interface type="robot">GenericRobot</interface>
+				</technique>
+			</extra>
+		</articulated_system>
+	</library_articulated_systems>
+	<library_kinematics_scenes id="kscenes">
+		<kinematics_scene id="kscene" name="lbr_iiwa_meshfree">
+			<instance_articulated_system sid="body1_motion_inst" url="#body1_motion" name="lbr_iiwa">
+				<newparam sid="kscene_kmodel1_inst">
+					<SIDREF>body1_motion/body1_motion_kmodel1_inst</SIDREF>
+				</newparam>
+			</instance_articulated_system>
+		</kinematics_scene>
+	</library_kinematics_scenes>
+	<library_physics_scenes id="pscenes">
+		<physics_scene id="pscene" name="lbr_iiwa_meshfree">
+			<instance_physics_model url="#pmodel1" sid="pmodel1_inst"/>
+			<technique_common>
+				<gravity>0 0 -9.797930195020351</gravity>
+			</technique_common>
+		</physics_scene>
+	</library_physics_scenes>
+	<library_physics_models id="pmodels">
+		<physics_model id="pmodel1" name="lbr_iiwa"/>
+	</library_physics_models>
+	<scene>
+		<instance_physics_scene url="#pscene" sid="pscene_inst" name="lbr_iiwa_meshfree"/>
+		<instance_visual_scene url="#vscene" sid="vscene_inst" name="lbr_iiwa_meshfree"/>
+		<instance_kinematics_scene url="#kscene" sid="kscene_inst" name="lbr_iiwa_meshfree">
+			<bind_kinematics_model node="visual1/node0">
+				<param>kscene_kmodel1_inst</param>
+			</bind_kinematics_model>
+		</instance_kinematics_scene>
+	</scene>
+	<extra id="sensors" type="library_sensors">
+		<technique profile="OpenRAVE"/>
+	</extra>
+	<extra id="actuators" type="library_actuators">
+		<technique profile="OpenRAVE"/>
+	</extra>
+</COLLADA>

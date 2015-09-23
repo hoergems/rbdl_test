@@ -20,7 +20,23 @@ OMPLControlTest::OMPLControlTest(const std::string &collada_model,
     
     /***** Initialize OpenRAVE *****/
     OpenRAVE::RaveInitialize(true);
-    OpenRAVE::EnvironmentBasePtr environment(OpenRAVE::RaveCreateEnvironment());     
+    OpenRAVE::EnvironmentBasePtr environment(OpenRAVE::RaveCreateEnvironment());    
+
+    const std::string module_str("or_urdf_plugin");
+    if(!OpenRAVE::RaveLoadPlugin(module_str)) {
+        cout << "Failed to load the or_urdf_plugin." << endl;
+        return;
+    }
+    
+    OpenRAVE::ModuleBasePtr urdf_module = OpenRAVE::RaveCreateModule(environment, "URDF");
+    const std::string cmdargs("");
+    environment->AddModule(urdf_module, cmdargs);
+    std::stringstream sinput, sout;
+    sinput << "load ./lbr_iiwa/urdf/lbr_iiwa_meshfree.urdf";
+    if (!urdf_module->SendCommand(sout,sinput)) {
+        cout << "Failed to load URDF model" << endl;
+    }
+        
     environment->Load(collada_model);
     environment->StopSimulation();
     
@@ -65,23 +81,34 @@ bool OMPLControlTest::setup_ompl_(OpenRAVE::RobotBasePtr &robot, double &simulat
     
     // Set the bounds
     const std::vector<OpenRAVE::KinBody::JointPtr> joints(robot->GetJoints());
+    ompl::base::RealVectorBounds control_bounds(control_space_dimension_);
+    double torque_bounds = 0.8;    
     for (size_t i = 0; i < joints.size(); i++) {
         std::vector<OpenRAVE::dReal> lower_limit;
         std::vector<OpenRAVE::dReal> upper_limit;        
         joints[i]->GetLimits(lower_limit, upper_limit);        
         
+        // Set the joints position bounds
+        cout << "pos low " << lower_limit[0] << endl;
+        cout << "pos high " << upper_limit[0] << endl;
         state_space_bounds_.setLow(i, lower_limit[0]);
         state_space_bounds_.setHigh(i, upper_limit[0]);
-        
+
+        // Set the joints velocity bounds 
+        cout << "vel low " << -joints[i]->GetMaxVel() << endl;
+        cout << "vel high " << joints[i]->GetMaxVel() << endl;       
         state_space_bounds_.setLow(i + state_space_dimension_ / 2, -joints[i]->GetMaxVel());
         state_space_bounds_.setHigh(i + state_space_dimension_ / 2, joints[i]->GetMaxVel());
+
+        cout << "torque low " << -torque_bounds << endl;
+        cout << "torque high " << torque_bounds << endl;
+        control_bounds.setLow(i, -torque_bounds);
+        control_bounds.setHigh(i, torque_bounds);
+        torque_bounds = torque_bounds - 0.1;
     }
-    double torque_bounds = 0.3;
+    
     
     state_space_->as<ompl::base::RealVectorStateSpace>()->setBounds(state_space_bounds_);
-    ompl::base::RealVectorBounds control_bounds(control_space_dimension_);
-    control_bounds.setLow(-torque_bounds);
-    control_bounds.setHigh(torque_bounds);
     control_space_->as<ompl::control::RealVectorControlSpace>()->setBounds(control_bounds);
     return true;
 }
@@ -107,7 +134,7 @@ bool OMPLControlTest::solve_() {
     bool hasExactSolution = false;
     boost::timer t;
     while (!solved && !hasExactSolution) {
-        solved = planner_->solve(10.0);
+        solved = planner_->solve(20.0);
         
         // Get all the solutions
         std::vector<ompl::base::PlannerSolution> solutions = problem_definition_->getSolutions();

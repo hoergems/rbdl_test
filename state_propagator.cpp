@@ -130,8 +130,7 @@ void StatePropagator::propagate(const ompl::base::State *state,
     for (unsigned int i = 0; i < 2 * dim; i++) {
         cout << " " << result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i];
     }
-    cout << endl;
-    cout << endl;
+    cout << endl;    
     //sleep(1);             
 }
 
