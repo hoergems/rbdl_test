@@ -62,25 +62,25 @@
       <inertia ixx="0.05" ixy="0" ixz="0" iyy="0.06" iyz="0" izz="0.03"/>
     </inertial>
     <visual>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0 0.07875"/>
       <geometry>
-        <mesh filename="file:///home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/link_0.stl"/>
+        <box size="0.15 0.15 0.1575"/>
       </geometry>
       <material name="Grey"/>
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0 0.07875"/>
       <geometry>
-        <mesh filename="file:///home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/coarse/link_0.stl"/>
+        <box size="0.15 0.15 0.1575"/>
       </geometry>
       <material name="Grey"/>
     </collision>
-    <self_collision_checking>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <geometry>
-        <capsule length="0.25" radius="0.15"/>
-      </geometry>
-    </self_collision_checking>
+    <!--self_collision_checking>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <capsule radius="0.15" length="0.25"/>
+        </geometry>
+      </self_collision_checking-->
   </link>
   <!-- joint between link_0 and link_1 -->
   <joint name="lbr_iiwa_joint_1" type="revolute">
@@ -102,16 +102,16 @@
       <inertia ixx="0.1" ixy="0" ixz="0" iyy="0.09" iyz="0" izz="0.02"/>
     </inertial>
     <visual>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0 0.10125"/>
       <geometry>
-        <mesh filename="file:///home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/link_1.stl"/>
+        <box size="0.05 0.05 0.2025"/>
       </geometry>
       <material name="Orange"/>
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0 0.10125"/>
       <geometry>
-        <mesh filename="file:///home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/coarse/link_1.stl"/>
+        <box size="0.05 0.05 0.2025"/>
       </geometry>
       <material name="Orange"/>
     </collision>
@@ -136,16 +136,16 @@
       <inertia ixx="0.05" ixy="0" ixz="0" iyy="0.018" iyz="0" izz="0.044"/>
     </inertial>
     <visual>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0.10225 0"/>
       <geometry>
-        <mesh filename="file:///home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/link_2.stl"/>
+        <box size="0.05 0.2045 0.05"/>
       </geometry>
       <material name="Orange"/>
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0.10225 0"/>
       <geometry>
-        <mesh filename="file:///home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/coarse/link_2.stl"/>
+        <box size="0.05 0.2045 0.05"/>
       </geometry>
       <material name="Orange"/>
     </collision>
@@ -170,16 +170,16 @@
       <inertia ixx="0.08" ixy="0" ixz="0" iyy="0.075" iyz="0" izz="0.01"/>
     </inertial>
     <visual>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0 0.10775"/>
       <geometry>
-        <mesh filename="file:///home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/link_3.stl"/>
+        <box size="0.05 0.05 0.2155"/>
       </geometry>
       <material name="Orange"/>
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0 0.10775"/>
       <geometry>
-        <mesh filename="file:///home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/coarse/link_3.stl"/>
+        <box size="0.05 0.05 0.2155"/>
       </geometry>
       <material name="Orange"/>
     </collision>
@@ -204,16 +204,16 @@
       <inertia ixx="0.03" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.029"/>
     </inertial>
     <visual>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0.09225 0"/>
       <geometry>
-        <mesh filename="file:///home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/link_4.stl"/>
+        <box size="0.05 0.1845 0.05"/>
       </geometry>
       <material name="Orange"/>
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0.09225 0"/>
       <geometry>
-        <mesh filename="file:///home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/coarse/link_4.stl"/>
+        <box size="0.05 0.1845 0.05"/>
       </geometry>
       <material name="Orange"/>
     </collision>
@@ -238,16 +238,16 @@
       <inertia ixx="0.02" ixy="0" ixz="0" iyy="0.018" iyz="0" izz="0.005"/>
     </inertial>
     <visual>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0 0.10775"/>
       <geometry>
-        <mesh filename="file:///home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/link_5.stl"/>
+        <box size="0.05 0.05 0.2155"/>
       </geometry>
       <material name="Orange"/>
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0 0.10775"/>
       <geometry>
-        <mesh filename="file:///home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/coarse/link_5.stl"/>
+        <box size="0.05 0.05 0.2155"/>
       </geometry>
       <material name="Orange"/>
     </collision>
@@ -272,16 +272,16 @@
       <inertia ixx="0.005" ixy="0" ixz="0" iyy="0.0036" iyz="0" izz="0.0047"/>
     </inertial>
     <visual>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0.0405 0"/>
       <geometry>
-        <mesh filename="file:///home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/link_6.stl"/>
+        <box size="0.05 0.081 0.05"/>
       </geometry>
       <material name="Orange"/>
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0.0405 0"/>
       <geometry>
-        <mesh filename="file:///home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/coarse/link_6.stl"/>
+        <box size="0.05 0.081 0.05"/>
       </geometry>
       <material name="Orange"/>
     </collision>
@@ -306,16 +306,16 @@
       <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
     </inertial>
     <visual>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0 0.02"/>
       <geometry>
-        <mesh filename="file:///home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/link_7.stl"/>
+        <box size="0.05 0.05 0.04"/>
       </geometry>
       <material name="Grey"/>
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0 0.02"/>
       <geometry>
-        <mesh filename="file:///home/hoe01h/catkin_ws/src/lbr_iiwa/lbr_iiwa_description/meshes/coarse/link_7.stl"/>
+        <box size="0.05 0.05 0.04"/>
       </geometry>
       <material name="Grey"/>
     </collision>

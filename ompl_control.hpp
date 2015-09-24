@@ -6,6 +6,8 @@
 #include <boost/make_shared.hpp>
 #include "state_propagator.hpp"
 #include "goal.hpp"
+#include "viewer.hpp"
+#include "rbdl_test.hpp"
 #include <openrave-core.h>
 #include <openrave/environment.h>
 
@@ -32,17 +34,25 @@ namespace shared {
 
     class OMPLControlTest {
         public:
-        	OMPLControlTest(const std::string &collada_model,
-                            double &control_duration,
-                            double &simulation_step_size);
+        	OMPLControlTest(const std::string &model_file,
+                                double &control_duration,
+                                double &simulation_step_size);
                             
-            ~OMPLControlTest() { OpenRAVE::RaveDestroy(); }
+                ~OMPLControlTest() { OpenRAVE::RaveDestroy(); }
         	
         	bool isValid(const ompl::base::State *state);
         	
         	void test();
 
+                OpenRAVE::EnvironmentBasePtr getEnvironment();
+
+                OpenRAVE::RobotBasePtr getRobot();
+
+                void testPhysics();
+
         private:
+                boost::shared_ptr<RbdlTest> damper_;
+
                 double control_duration_;
 
                 // Dimension of the state space
@@ -70,6 +80,8 @@ namespace shared {
                 ompl::base::PlannerPtr planner_;
                 
                 ompl::control::StatePropagatorPtr state_propagator_;
+
+                OpenRAVE::EnvironmentBasePtr env_;
 
                 // Solve the motion planning problem
                 bool solve_();

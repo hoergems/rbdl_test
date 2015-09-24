@@ -5,9 +5,10 @@ using std::endl;
 
 namespace shared {
 
-OMPLControlTest::OMPLControlTest(const std::string &collada_model,
+OMPLControlTest::OMPLControlTest(const std::string &model_file,
                                  double &control_duration,
                                  double &simulation_step_size):
+    damper_(new RbdlTest()),
     control_duration_(control_duration),
     state_space_(nullptr),
     state_space_bounds_(1),
@@ -15,12 +16,14 @@ OMPLControlTest::OMPLControlTest(const std::string &collada_model,
     space_information_(nullptr),
     problem_definition_(nullptr),
     planner_(nullptr),
-    state_propagator_(nullptr)    
+    state_propagator_(nullptr),
+    env_(nullptr)   
 {    
-    
+    damper_->init(model_file);
+
     /***** Initialize OpenRAVE *****/
-    OpenRAVE::RaveInitialize(true);
-    OpenRAVE::EnvironmentBasePtr environment(OpenRAVE::RaveCreateEnvironment());    
+    OpenRAVE::RaveInitialize(true);    
+    env_ = OpenRAVE::RaveCreateEnvironment();    
 
     const std::string module_str("or_urdf_plugin");
     if(!OpenRAVE::RaveLoadPlugin(module_str)) {
@@ -28,33 +31,55 @@ OMPLControlTest::OMPLControlTest(const std::string &collada_model,
         return;
     }
     
-    OpenRAVE::ModuleBasePtr urdf_module = OpenRAVE::RaveCreateModule(environment, "URDF");
+    OpenRAVE::ModuleBasePtr urdf_module = OpenRAVE::RaveCreateModule(env_, "URDF");
     const std::string cmdargs("");
-    environment->AddModule(urdf_module, cmdargs);
+    env_->AddModule(urdf_module, cmdargs);
     std::stringstream sinput, sout;
-    sinput << "load ./lbr_iiwa/urdf/lbr_iiwa_meshfree.urdf";
+    sinput << "load " << model_file;
     if (!urdf_module->SendCommand(sout,sinput)) {
         cout << "Failed to load URDF model" << endl;
     }
-        
-    environment->Load(collada_model);
-    environment->StopSimulation();
+    std::vector<OpenRAVE::KinBodyPtr> bodies;
+    env_->GetBodies(bodies);
+    cout << "len bodies " << bodies.size() << endl;  
+    //env_->Load(collada_model);
+    env_->StopSimulation();
     
-    std::vector<OpenRAVE::RobotBasePtr> robots;
-    environment->GetRobots(robots);
-    OpenRAVE::RobotBasePtr robot = robots[0];
+    /**std::vector<OpenRAVE::RobotBasePtr> robots;
+    env_->GetRobots(robots);
+    OpenRAVE::RobotBasePtr robot = robots[0];*/
+    
+    OpenRAVE::RobotBasePtr robot = getRobot();
+
+    const std::vector<OpenRAVE::KinBody::LinkPtr> links(robot->GetLinks());
+    cout << "link 0 name " << links[0]->GetName() << endl;
+    //links[0]->Enable(false);
+    links[0]->SetStatic(true);
+    cout << "is static " << links[0]->IsStatic() << endl;
     
     /***** Setup OMPL *****/
     setup_ompl_(robot, simulation_step_size);
     
     /***** Create the physics engine *****/
     const std::string engine = "ode";
-    OpenRAVE::PhysicsEngineBasePtr physics_engine_ = OpenRAVE::RaveCreatePhysicsEngine(environment, engine);
+    OpenRAVE::PhysicsEngineBasePtr physics_engine_ = OpenRAVE::RaveCreatePhysicsEngine(env_, engine);
     const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});
+    //const OpenRAVE::Vector gravity({0.0, 0.0, -5.81});
     physics_engine_->SetGravity(gravity);
-    environment->SetPhysicsEngine(physics_engine_);
+    env_->SetPhysicsEngine(physics_engine_);
     
-    boost::static_pointer_cast<StatePropagator>(state_propagator_)->setupOpenRAVEEnvironment(environment, robot);
+    boost::static_pointer_cast<StatePropagator>(state_propagator_)->setupOpenRAVEEnvironment(env_, robot);
+}
+
+OpenRAVE::EnvironmentBasePtr OMPLControlTest::getEnvironment() {
+    return env_;
+}
+
+OpenRAVE::RobotBasePtr OMPLControlTest::getRobot() {
+    std::vector<OpenRAVE::KinBodyPtr> bodies;
+    env_->GetBodies(bodies);
+    OpenRAVE::RobotBasePtr robot = boost::static_pointer_cast<OpenRAVE::RobotBase>(bodies[0]);
+    return robot;
 }
 
 bool OMPLControlTest::setup_ompl_(OpenRAVE::RobotBasePtr &robot, double &simulation_step_size) {
@@ -207,17 +232,100 @@ void OMPLControlTest::test() {
         }
     }
 }
+
+void OMPLControlTest::testPhysics() {
+    cout << "Testing physics" << endl;    
+    OpenRAVE::RobotBasePtr robot = getRobot();
+
+    //OpenRAVE::ODEPhysicsEngine *ode = boost::static_pointer_cast<OpenRAVE::ODEPhysicsEngine>(env_->GetPhysicsEngine());
+    OpenRAVE::dReal globalFriction = 100.0;
+    //env_->GetPhysicsEngine()->SetGlobalFriction(globalFriction);
+    
+    const std::vector<OpenRAVE::KinBody::JointPtr> joints(robot->GetJoints());
+    std::vector<OpenRAVE::dReal> torquesTemp({0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.05});
+    OpenRAVE::dReal time(2.0);
+
+    //std::vector<OpenRAVE::dReal> current_pos;
+    std::vector<OpenRAVE::dReal> current_vel;    
+    //std::vector<OpenRAVE::dReal> old_vel;
+    //std::vector<OpenRAVE::dReal> accelerations;
+    std::vector<OpenRAVE::dReal> damped_torques;
+    for (size_t i = 0; i < joints.size(); i++) {
+        damped_torques.push_back(0);
+    }
+    
+    double delta_t(0.0001);    
+    //env_->StartSimulation(10000, true);
+
+    while(true) {
+        /**std::vector<OpenRAVE::dReal> doftorques, 
+        const std::vector<OpenRAVE::dReal> dofaccelerations
+        ComputeInverseDynamics(doftorques, )*/
+        
+        //robot->GetDOFValues(current_pos);
+        robot->GetDOFVelocities(current_vel);
+  
+        double c(0.0);
+        double v(1.0);
+        
+        //cout << "accelerations: ";
+        for (size_t j = 0; j < joints.size(); j++) {
+            if (current_vel[j] != 0.0) {
+                damped_torques[j] = -(c * (current_vel[j] / fabs(current_vel[j])) + v * current_vel[j]);
+            }
+            else {
+                damped_torques[j] = 0.0;
+            } 
+            //accelerations[j] = (current_vel[j] - old_vel[j]) / delta_t;
+            //cout << accelerations[j] << " ";
+        }
+        //cout << endl;
+        /**damper_->calcDamping(current_pos,
+                             current_vel,
+                             old_vel,
+                             delta_t,
+                             damped_torques);*/
+        //const std::vector<OpenRAVE::dReal> dofaccelerations = accelerations;
+        //cout << "Damped torques: ";       
+        //robot->ComputeInverseDynamics(damped_torques, dofaccelerations);
+        for (size_t k = 0; k < joints.size(); k++) {
+            if (k == 0) {                  
+                  cout << "WHAT " << damped_torques[k] << ", " << current_vel[k] << endl;
+                  damped_torques[k] = damped_torques[k] + 30.0;                  
+            }
+            //cout << -damped_torques[k] << " ";          
+            const std::vector<OpenRAVE::dReal> torques({damped_torques[k]});
+            joints[k]->AddTorque(torques);
+        }
+        //cout << endl;
+        
+        env_->StepSimulation(delta_t);        
+        env_->StopSimulation();
+        usleep(1000000 * delta_t);
+
+        /**for (size_t j = 0; j < current_vel.size(); j++) {
+            old_vel[j] = current_vel[j];
+            damped_torques[j] = 0; 
+        }*/      
+    }      
+    
+    
+}
  
 }
 
 int main(int argc, char** argv) {    
     double control_duration = 0.05;
     double simulation_step_size = 0.0005;
-    const std::string collada_model("./lbr_iiwa/urdf/lbr_iiwa.dae");    
-    shared::OMPLControlTest ompl_test(collada_model,
+    const std::string model_file("./lbr_iiwa/urdf/lbr_iiwa_meshfree.urdf");    
+    shared::OMPLControlTest ompl_test(model_file,
                                       control_duration,
                                       simulation_step_size);
-    ompl_test.test();
+    shared::ViewerTest viewer;
+    OpenRAVE::EnvironmentBasePtr env = ompl_test.getEnvironment(); 
+    viewer.testView(env);    
+    ompl_test.testPhysics();    
+    //ompl_test.test();
     //OpenRAVE::RaveDestroy();
     return 0;
 }

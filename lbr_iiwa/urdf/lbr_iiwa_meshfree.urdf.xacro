@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <robot name="lbr_iiwa" xmlns:xacro="http://www.ros.org/wiki/xacro">
   <!-- Import Rviz colors -->
-  <xacro:include filename="$(find lbr_iiwa_description)/urdf/materials.xacro" />
+  <xacro:include filename="materials.xacro" />
   <!--Import the lbr iiwa macro -->
-  <xacro:include filename="$(find lbr_iiwa_description)/urdf/lbr_iiwa_meshfree.xacro"/>
+  <xacro:include filename="lbr_iiwa_meshfree_simple.xacro"/>
  <!-- Import Gazebo plugins -->
   <xacro:include filename="$(find lbr_iiwa_description)/gazebo/gazebo.urdf.xacro"/>
 
@@ -12,7 +12,7 @@
 
   <!--lbr-->
   <xacro:lbr_iiwa name="lbr_iiwa" hardware_interface="$(arg prefix)" parent="world">
-    <origin xyz="0 0 0.0" rpy="0 0 0" />
+    <origin xyz="0 0 0.0" rpy="-1 0 0" />
   </xacro:lbr_iiwa>
 
 </robot>
