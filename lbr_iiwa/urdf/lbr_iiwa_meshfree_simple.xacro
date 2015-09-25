@@ -13,7 +13,7 @@
   <xacro:property name="safety_controller_k_vel" value="2" /> -->
   <xacro:property name="joint_damping" value="0.5" />
   <xacro:property name="max_effort" value="300"/>
-  <xacro:property name="max_velocity" value="10"/>
+  <xacro:property name="max_velocity" value="30"/>
   <xacro:property name="len_link_0" value="0.1575"/>
   <xacro:property name="len_link_1" value="0.2025"/>
   <xacro:property name="len_link_2" value="0.2045"/>

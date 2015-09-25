@@ -22,7 +22,7 @@ bool ManipulatorGoalState::isSatisfied(const ompl::base::State *st) const {
     }
 
     double dist(sqrt(sum));    
-    if (dist < 0.6) {
+    if (dist < 0.3) {
         cout << "IS SATISFIED!!!!" << endl;
         return true;
     }    

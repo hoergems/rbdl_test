@@ -14,12 +14,16 @@
 #include <openrave-core.h>
 #include <openrave/environment.h>
 
+#include "torque_damper.hpp"
+
 namespace RBD = RigidBodyDynamics;
 
 namespace shared {
     class StatePropagator: public ompl::control::StatePropagator {
         public:
-            StatePropagator(const ompl::control::SpaceInformationPtr &si, double &simulation_step_size);
+            StatePropagator(const ompl::control::SpaceInformationPtr &si, 
+                            double &simulation_step_size,
+                            boost::shared_ptr<TorqueDamper> &damper);
             
             void propagate(const ompl::base::State *state, 
                            const ompl::control::Control *control, 
@@ -52,7 +56,9 @@ namespace shared {
             OpenRAVE::RobotBasePtr robot_;
             
             // The simulation step size
-            double simulation_step_size_;  
+            double simulation_step_size_;
+            
+            boost::shared_ptr<TorqueDamper> damper_;  
     };
 
 }

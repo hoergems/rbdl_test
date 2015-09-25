@@ -7,7 +7,8 @@
 #include "state_propagator.hpp"
 #include "goal.hpp"
 #include "viewer.hpp"
-#include "rbdl_test.hpp"
+#include "torque_damper.hpp"
+#include "control_space.hpp"
 #include <openrave-core.h>
 #include <openrave/environment.h>
 
@@ -51,7 +52,7 @@ namespace shared {
                 void testPhysics();
 
         private:
-                boost::shared_ptr<RbdlTest> damper_;
+                boost::shared_ptr<TorqueDamper> damper_;
 
                 double control_duration_;
 
@@ -87,6 +88,11 @@ namespace shared {
                 bool solve_();
                 
                 bool setup_ompl_(OpenRAVE::RobotBasePtr &robot, double &simulation_step_size);
+                
+                void damp_torques_(std::vector<OpenRAVE::dReal> &current_velocities, 
+                                   std::vector<OpenRAVE::dReal> &torques);
+                                   
+                ompl::control::ControlSamplerPtr allocUniformControlSampler_(const ompl::control::ControlSpace *control_space);
     };
 }
 

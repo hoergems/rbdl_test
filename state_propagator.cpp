@@ -8,13 +8,16 @@ using namespace RigidBodyDynamics::Math;
 
 namespace shared {
 
-StatePropagator::StatePropagator(const ompl::control::SpaceInformationPtr &si, double &simulation_step_size):
+StatePropagator::StatePropagator(const ompl::control::SpaceInformationPtr &si, 
+                                 double &simulation_step_size,
+                                 boost::shared_ptr<TorqueDamper> &damper):
     ompl::control::StatePropagator(si),
     space_information_(si),    
     model_setup_(false),
     environment_(nullptr),
     robot_(nullptr),
-    simulation_step_size_(simulation_step_size)
+    simulation_step_size_(simulation_step_size),
+    damper_(damper)
 {
     
 }
@@ -25,7 +28,7 @@ void StatePropagator::propagate(const ompl::base::State *state,
                                 ompl::base::State *result) const {
     unsigned int dim = space_information_->getStateSpace()->getDimension() / 2;
 
-    std::vector<OpenRAVE::dReal> upper;
+    /**std::vector<OpenRAVE::dReal> upper;
     std::vector<OpenRAVE::dReal> lower;
     robot_->GetDOFLimits(lower, upper);
     
@@ -66,14 +69,14 @@ void StatePropagator::propagate(const ompl::base::State *state,
     for (unsigned int i = 0; i < dim; i++) {
         cout << torque_limits[i] << " " << endl;
     }
-    cout << endl;
+    cout << endl;*/
     
                                 
-    cout << "State: ";
+    /**cout << endl << "State: ";
     for (unsigned int i = 0; i < dim * 2.0; i++) {
         cout << " " << state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i];
     }
-    cout << endl;
+    cout << endl;*/
                                 
     std::vector<OpenRAVE::dReal> currentJointValuesTemp;
     std::vector<OpenRAVE::dReal> currentJointVelocitiesTemp;
@@ -88,19 +91,22 @@ void StatePropagator::propagate(const ompl::base::State *state,
         torquesTemp.push_back(control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[i]);        
     }
     
+    damper_->damp_torques(currentJointVelocitiesTemp,
+                          torquesTemp);
+    
     const std::vector<OpenRAVE::dReal> currentJointValues(currentJointValuesTemp);
     const std::vector<OpenRAVE::dReal> currentJointVelocities(currentJointVelocitiesTemp);
     
     robot_->SetDOFValues(currentJointValues);
     robot_->SetDOFVelocities(currentJointVelocities);
     
-    //cout << "duration " << duration << endl;
+    /**cout << "duration " << duration << endl;
           
     cout << "Torques: ";
     for (size_t k = 0; k < joints.size(); k++) {
        cout << torquesTemp[k] << " ";       
     }
-    cout << endl;
+    cout << endl;*/
     //cout << "start sim time " << environment_->GetSimulationTime() * 1e-6 << endl;
     int num_steps = duration / simulation_step_size_;
     for (unsigned int i = 0; i < num_steps; i++) {
@@ -126,12 +132,12 @@ void StatePropagator::propagate(const ompl::base::State *state,
         result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i + dim] = newJointVelocities[i];
     }
     
-    cout << "result ";
+    /**cout << "result ";
     for (unsigned int i = 0; i < 2 * dim; i++) {
         cout << " " << result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i];
     }
-    cout << endl;    
-    //sleep(1);             
+    cout << endl;
+    sleep(1);*/             
 }
 
 bool StatePropagator::canPropagateBackward() const{

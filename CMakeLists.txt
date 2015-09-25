@@ -19,7 +19,7 @@ link_directories(/usr/lib /usr/local/lib)
 # link the libraries to the executable
 
 
-add_executable(ompl_test ompl_control.cpp state_propagator.cpp goal.cpp viewer.cpp rbdl_test.cpp)
+add_executable(ompl_test ompl_control.cpp state_propagator.cpp goal.cpp viewer.cpp torque_damper.cpp control_space.cpp control_sampler.cpp)
 set_property(TARGET ompl_test PROPERTY CXX_STANDARD 11)
 target_link_libraries (ompl_test 
                        rbdl

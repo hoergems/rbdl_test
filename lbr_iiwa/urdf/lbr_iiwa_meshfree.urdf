@@ -88,7 +88,7 @@
     <child link="lbr_iiwa_link_1"/>
     <origin rpy="0 0 0" xyz="0 0 0.1575"/>
     <axis xyz="0 0 1"/>
-    <limit effort="300" lower="-3.14159265359" upper="3.14159265359" velocity="10"/>
+    <limit effort="300" lower="-3.14159265359" upper="3.14159265359" velocity="30"/>
     <!--   <safety_controller soft_lower_limit="${-168 * M_PI / 180}"
            soft_upper_limit="${168 * M_PI / 180}"
            k_position="${safety_controller_k_pos}"
@@ -122,7 +122,7 @@
     <child link="lbr_iiwa_link_2"/>
     <origin rpy="1.57079632679   0 3.14159265359" xyz="0 0 0.2025"/>
     <axis xyz="0 0 1"/>
-    <limit effort="300" lower="-2.09439510239" upper="2.09439510239" velocity="10"/>
+    <limit effort="300" lower="-2.09439510239" upper="2.09439510239" velocity="30"/>
     <!-- <safety_controller soft_lower_limit="${-118 * PI / 180}"
            soft_upper_limit="${118 * PI / 180}"
            k_position="${safety_controller_k_pos}"
@@ -156,7 +156,7 @@
     <child link="lbr_iiwa_link_3"/>
     <origin rpy="1.57079632679 0 3.14159265359" xyz="0 0.2045 0"/>
     <axis xyz="0 1 0"/>
-    <limit effort="300" lower="-2.96705972839" upper="2.96705972839" velocity="10"/>
+    <limit effort="300" lower="-2.96705972839" upper="2.96705972839" velocity="30"/>
     <!-- <safety_controller soft_lower_limit="${-118 * PI / 180}"
            soft_upper_limit="${118 * PI / 180}"
            k_position="${safety_controller_k_pos}"
