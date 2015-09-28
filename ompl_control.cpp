@@ -7,8 +7,10 @@ namespace shared {
 
 OMPLControlTest::OMPLControlTest(const std::string &model_file,
                                  double &control_duration,
-                                 double &simulation_step_size):
-    damper_(new TorqueDamper(0.0, 1.0)),
+                                 double &simulation_step_size,
+                                 double &coulomb,
+                                 double &viscous):
+    damper_(new TorqueDamper(coulomb, viscous)),
     control_duration_(control_duration),
     state_space_(nullptr),
     state_space_bounds_(1),
@@ -243,69 +245,72 @@ void OMPLControlTest::test() {
     }
 }
 
-void OMPLControlTest::damp_torques_(std::vector<OpenRAVE::dReal> &current_velocities,
-                                    std::vector<OpenRAVE::dReal> &torques) {
-    double c(0.0);
-    double v(1.0);
-    for (size_t i = 0; i < current_velocities.size(); i++) {    
-        if (current_velocities[i] != 0.0) {
-            torques[i] = -(c * (current_velocities[i] / fabs(current_velocities[i])) + 
-                           v * current_velocities[i]);
-        }
-        else {
-            torques[i] = 0.0;
-        }
-        
-    }
-}
-
-void OMPLControlTest::testPhysics() {
+void OMPLControlTest::testPhysics(double &simulation_step_size) {
+    shared::ViewerTest viewer;
+    viewer.testView(env_);
     cout << "Testing physics" << endl;    
     OpenRAVE::RobotBasePtr robot = getRobot();
     
     const std::vector<OpenRAVE::KinBody::JointPtr> joints(robot->GetJoints());    
     std::vector<OpenRAVE::dReal> current_vel;
     std::vector<OpenRAVE::dReal> damped_torques;
+    std::vector<OpenRAVE::dReal> desired_torques({15.0, 0.0, 0.0});
+    std::vector<OpenRAVE::dReal> input_torques({0.0, 0.0, 0.0});
+    int b = 0;
     for (size_t i = 0; i < joints.size(); i++) {
         damped_torques.push_back(0);
     }
     
-    double delta_t(0.0001);
-    
     while(true) {
-        robot->GetDOFVelocities(current_vel);
+        b++;
+        robot->GetDOFVelocities(current_vel);        
         damper_->damp_torques(current_vel, damped_torques);
-        cout << "current vel: ";        
+        
+        cout << "current velocity: ";        
         for (size_t k = 0; k < joints.size(); k++) {
-            cout << current_vel[k] << " ";
-            if (k == 0) {                  
-                  //cout << "WHAT " << damped_torques[k] << ", " << current_vel[k] << endl;
-                  damped_torques[k] = damped_torques[k] + 20.0;                  
-            }   
-            const std::vector<OpenRAVE::dReal> torques({damped_torques[k]});
+           cout << current_vel[k] << " ";
+        } 
+        cout << endl;
+        cout << "Damped torques: ";     
+        for (size_t k = 0; k < joints.size(); k++) {
+            cout << damped_torques[k] << " ";
+            //if (b < 500) {
+                input_torques[k] = desired_torques[k] + damped_torques[k];
+            //}
+            //else {
+            //    cout << "!!!!!!!!!!!";
+            //    input_torques[k] = damped_torques[k];
+            //}
+            
+              
+            const std::vector<OpenRAVE::dReal> torques({input_torques[k]});
             joints[k]->AddTorque(torques);
         }
-        env_->StepSimulation(delta_t);        
+        env_->StepSimulation(simulation_step_size);        
         env_->StopSimulation();
-        usleep(1000000 * delta_t);
+        usleep(1000000 * simulation_step_size);
         cout << endl;
     }
 }
  
 }
 
-int main(int argc, char** argv) {    
+int main(int argc, char** argv) {
+    double coulomb = 0.0;
+    double viscous = 1.0;    
     double control_duration = 0.05;
-    double simulation_step_size = 0.005;
+    double simulation_step_size = 0.0005;
     const std::string model_file("./lbr_iiwa/urdf/lbr_iiwa_meshfree.urdf");    
     shared::OMPLControlTest ompl_test(model_file,
                                       control_duration,
-                                      simulation_step_size);
-    shared::ViewerTest viewer;
-    OpenRAVE::EnvironmentBasePtr env = ompl_test.getEnvironment(); 
+                                      simulation_step_size,
+                                      coulomb,
+                                      viscous);
+    //shared::ViewerTest viewer;
+    //OpenRAVE::EnvironmentBasePtr env = ompl_test.getEnvironment(); 
     //viewer.testView(env);    
-    //ompl_test.testPhysics();    
-    ompl_test.test();
+    ompl_test.testPhysics(simulation_step_size);    
+    //ompl_test.test();
     //OpenRAVE::RaveDestroy();
     return 0;
 }

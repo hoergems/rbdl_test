@@ -37,7 +37,9 @@ namespace shared {
         public:
         	OMPLControlTest(const std::string &model_file,
                                 double &control_duration,
-                                double &simulation_step_size);
+                                double &simulation_step_size,
+                                double &coulomb,
+                                double &viscous);
                             
                 ~OMPLControlTest() { OpenRAVE::RaveDestroy(); }
         	
@@ -49,7 +51,7 @@ namespace shared {
 
                 OpenRAVE::RobotBasePtr getRobot();
 
-                void testPhysics();
+                void testPhysics(double &simulation_step_size);
 
         private:
                 boost::shared_ptr<TorqueDamper> damper_;
@@ -88,9 +90,6 @@ namespace shared {
                 bool solve_();
                 
                 bool setup_ompl_(OpenRAVE::RobotBasePtr &robot, double &simulation_step_size);
-                
-                void damp_torques_(std::vector<OpenRAVE::dReal> &current_velocities, 
-                                   std::vector<OpenRAVE::dReal> &torques);
                                    
                 ompl::control::ControlSamplerPtr allocUniformControlSampler_(const ompl::control::ControlSpace *control_space);
     };
