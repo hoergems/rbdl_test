@@ -12,8 +12,10 @@
  <!-- <xacro:property name="safety_controller_k_pos" value="100" />
   <xacro:property name="safety_controller_k_vel" value="2" /> -->
   <xacro:property name="joint_damping" value="0.5" />
-  <xacro:property name="max_effort" value="300"/>
-  <xacro:property name="max_velocity" value="30"/>
+  <xacro:property name="max_effort_joint1" value="10"/>
+  <xacro:property name="max_effort_joint2" value="30"/>
+  <xacro:property name="max_effort_joint3" value="30"/>
+  <xacro:property name="max_velocity" value="50"/>
   <xacro:property name="len_link_0" value="0.1575"/>
   <xacro:property name="len_link_1" value="0.2025"/>
   <xacro:property name="len_link_2" value="0.2045"/>
@@ -71,7 +73,7 @@
       <origin xyz="0 0 0.1575" rpy="0 0 0"/>
       <axis xyz="0 0 1"/>
       <limit lower="${-180 * PI / 180}" upper="${180 * PI / 180}"
-             effort="${max_effort}" velocity="${max_velocity}" />
+             effort="${max_effort_joint1}" velocity="${max_velocity}" />
       <!--   <safety_controller soft_lower_limit="${-168 * M_PI / 180}"
            soft_upper_limit="${168 * M_PI / 180}"
            k_position="${safety_controller_k_pos}"
@@ -110,7 +112,7 @@
       <origin xyz="0 0 0.2025" rpy="${PI / 2}   0 ${PI}"/>
       <axis xyz="0 0 1"/>
       <limit lower="${-120 * PI / 180}" upper="${120 * PI / 180}"
-             effort="${max_effort}" velocity="${max_velocity}" />
+             effort="${max_effort_joint2}" velocity="${max_velocity}" />
       <!-- <safety_controller soft_lower_limit="${-118 * PI / 180}"
            soft_upper_limit="${118 * PI / 180}"
            k_position="${safety_controller_k_pos}"
@@ -149,7 +151,9 @@
       <origin xyz="0 0.2045 0" rpy="${PI / 2} 0 ${PI}"/>
       <axis xyz="0 1 0"/>
       <limit lower="${-170 * PI / 180}" upper="${170 * PI / 180}"
-             effort="${max_effort}" velocity="${max_velocity}" />
+             effort="${max_effort_joint3}" velocity="${max_velocity}" />
+      <!--limit lower="0" upper="0"
+             effort="${max_effort_joint3}" velocity="${max_velocity}" /-->
       <!-- <safety_controller soft_lower_limit="${-118 * PI / 180}"
            soft_upper_limit="${118 * PI / 180}"
            k_position="${safety_controller_k_pos}"

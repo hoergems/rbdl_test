@@ -17,6 +17,7 @@
 #include <ompl/control/spaces/RealVectorControlSpace.h>
 #include <ompl/control/SpaceInformation.h>
 #include <ompl/control/planners/rrt/RRT.h>
+#include <ompl/control/planners/est/EST.h>
 
 #include <ompl/base/State.h>
 #include <ompl/base/Goal.h>
@@ -31,7 +32,7 @@
 
 namespace shared {
 
-    
+    typedef boost::shared_ptr<ompl::control::PathControl> PathControlPtr;
 
     class OMPLControlTest {
         public:
@@ -45,13 +46,16 @@ namespace shared {
         	
         	bool isValid(const ompl::base::State *state);
         	
-        	void test();
+        	PathControlPtr test();
 
                 OpenRAVE::EnvironmentBasePtr getEnvironment();
 
                 OpenRAVE::RobotBasePtr getRobot();
 
                 void testPhysics(double &simulation_step_size);
+
+                void viewControls(PathControlPtr &controls,
+                                  double &simulation_step_size);
 
         private:
                 boost::shared_ptr<TorqueDamper> damper_;

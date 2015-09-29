@@ -58,7 +58,12 @@ namespace shared {
             // The simulation step size
             double simulation_step_size_;
             
-            boost::shared_ptr<TorqueDamper> damper_;  
+            boost::shared_ptr<TorqueDamper> damper_;
+
+            std::vector<std::vector<OpenRAVE::dReal>> jointsLowerPositionLimit_; 
+            std::vector<std::vector<OpenRAVE::dReal>> jointsUpperPositionLimit_;
+            std::vector<std::vector<OpenRAVE::dReal>> jointsLowerVelocityLimit_; 
+            std::vector<std::vector<OpenRAVE::dReal>> jointsUpperVelocityLimit_;  
     };
 
 }

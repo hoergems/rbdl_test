@@ -18,8 +18,7 @@ void TorqueDamper::damp_torques(std::vector<OpenRAVE::dReal> &current_velocities
     for (size_t i = 0; i < current_velocities.size(); i++) {    
         if (current_velocities[i] != 0.0) {
             double damped_torque = -(coulomb_ * (current_velocities[i] / fabs(current_velocities[i])) + 
-                                     viscous_ * current_velocities[i]);
-            cout << "i " << torques[i] << endl;
+                                     viscous_ * current_velocities[i]);            
             torques[i] = damped_torque;
         }
     }                                 

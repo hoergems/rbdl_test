@@ -12,7 +12,7 @@
 
   <!--lbr-->
   <xacro:lbr_iiwa name="lbr_iiwa" hardware_interface="$(arg prefix)" parent="world">
-    <origin xyz="0 0 0.0" rpy="0 0 0" />
+    <origin xyz="0 0 0.0" rpy="3.14 0 0" />
   </xacro:lbr_iiwa>
 
 </robot>
