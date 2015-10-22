@@ -9,7 +9,8 @@ OMPLControlTest::OMPLControlTest(const std::string &model_file,
                                  double &control_duration,
                                  double &simulation_step_size,
                                  double &coulomb,
-                                 double &viscous):
+                                 double &viscous,
+                                 bool &linear_propagation):
     damper_(new TorqueDamper(coulomb, viscous)),
     control_duration_(control_duration),
     state_space_(nullptr),
@@ -19,7 +20,7 @@ OMPLControlTest::OMPLControlTest(const std::string &model_file,
     problem_definition_(nullptr),
     planner_(nullptr),
     state_propagator_(nullptr),
-    env_(nullptr)   
+    env_(nullptr)    
 {
     /***** Initialize OpenRAVE *****/
     OpenRAVE::RaveInitialize(true);    
@@ -51,20 +52,18 @@ OMPLControlTest::OMPLControlTest(const std::string &model_file,
     
     OpenRAVE::RobotBasePtr robot = getRobot();
 
-    const std::vector<OpenRAVE::KinBody::LinkPtr> links(robot->GetLinks());
-    cout << "link 0 name " << links[0]->GetName() << endl;
-    //links[0]->Enable(false);
+    const std::vector<OpenRAVE::KinBody::LinkPtr> links(robot->GetLinks());    
     links[0]->SetStatic(true);
     cout << "is static " << links[0]->IsStatic() << endl;
     
     /***** Setup OMPL *****/
-    setup_ompl_(robot, simulation_step_size);
+    setup_ompl_(robot, simulation_step_size, linear_propagation);
     
     /***** Create the physics engine *****/
     const std::string engine = "ode";
     OpenRAVE::PhysicsEngineBasePtr physics_engine_ = OpenRAVE::RaveCreatePhysicsEngine(env_, engine);
-    const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});
-    //const OpenRAVE::Vector gravity({0.0, 0.0, -5.81});
+    //const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});
+    const OpenRAVE::Vector gravity({0.0, 0.0, 0.0});
     physics_engine_->SetGravity(gravity);
     env_->SetPhysicsEngine(physics_engine_);
     
@@ -82,20 +81,24 @@ OpenRAVE::RobotBasePtr OMPLControlTest::getRobot() {
     return robot;
 }
 
-ompl::control::ControlSamplerPtr OMPLControlTest::allocUniformControlSampler_(const ompl::control::ControlSpace *control_space) {    
+ompl::control::ControlSamplerPtr OMPLControlTest::allocUniformControlSampler_(const ompl::control::ControlSpace *control_space) {
+	cout << "hello2" << endl;
+	return nullptr;
     return ompl::control::ControlSamplerPtr(new UniformControlSampler(control_space));
 }
 
-bool OMPLControlTest::setup_ompl_(OpenRAVE::RobotBasePtr &robot, double &simulation_step_size) {
+bool OMPLControlTest::setup_ompl_(OpenRAVE::RobotBasePtr &robot, 
+		                          double &simulation_step_size,
+		                          bool &linear_propagation) {
     // The state space consists of joint angles + velocity    
-    state_space_dimension_ = robot->GetDOF() * 2;
+    state_space_dimension_ = robot->GetDOF() * 2 - 2;
     control_space_dimension_ = state_space_dimension_ / 2;
     
     state_space_ = boost::make_shared<ompl::base::RealVectorStateSpace>(state_space_dimension_);    
     state_space_bounds_ = ompl::base::RealVectorBounds(state_space_dimension_);
     control_space_ = boost::make_shared<ControlSpace>(state_space_, control_space_dimension_);    
-    ompl::control::ControlSamplerPtr ptr_ = control_space_->allocControlSampler();
-    ompl::control::ControlSamplerPtr ptr2_ = control_space_->allocDefaultControlSampler();
+    //ompl::control::ControlSamplerPtr ptr_ = control_space_->allocControlSampler();
+    //ompl::control::ControlSamplerPtr ptr2_ = control_space_->allocDefaultControlSampler();
     
     space_information_ = boost::make_shared<ompl::control::SpaceInformation>(state_space_, control_space_);
     space_information_->setStateValidityChecker(boost::bind(&OMPLControlTest::isValid, this, _1));
@@ -103,14 +106,17 @@ bool OMPLControlTest::setup_ompl_(OpenRAVE::RobotBasePtr &robot, double &simulat
     space_information_->setPropagationStepSize(control_duration_);
      
     problem_definition_ = boost::make_shared<ompl::base::ProblemDefinition>(space_information_);
-    planner_ = boost::make_shared<ompl::control::EST>(space_information_);
-    //planner_->as<ompl::control::RRT>()->setIntermediateStates(true);
-    planner_->as<ompl::control::EST>()->setGoalBias(0.2);
+    planner_ = boost::make_shared<ompl::control::RRT>(space_information_);
+    planner_->as<ompl::control::RRT>()->setIntermediateStates(true);
+    planner_->as<ompl::control::RRT>()->setGoalBias(0.1);
     planner_->setProblemDefinition(problem_definition_); 
     
+    bool verbose = false;
     state_propagator_ = boost::make_shared<StatePropagator>(space_information_, 
                                                             simulation_step_size,
-                                                            damper_);    
+                                                            damper_,
+                                                            linear_propagation,
+                                                            verbose);    
     space_information_->setStatePropagator(state_propagator_);
     
     // Set the bounds
@@ -147,8 +153,14 @@ bool OMPLControlTest::setup_ompl_(OpenRAVE::RobotBasePtr &robot, double &simulat
     return true;
 }
 
-bool OMPLControlTest::isValid(const ompl::base::State *state) {
+bool OMPLControlTest::isValid(const ompl::base::State *state) {	
     bool valid = state_space_->as<ompl::base::RealVectorStateSpace>()->satisfiesBounds(state);
+    if (valid) {
+    	accepted_ = accepted_ + 1.0;
+    }
+    else {
+    	rejected_ = rejected_ + 1.0;
+    }    
     /**cout << "state: ";
     for (size_t i = 0; i < 6; i++) {
         cout << state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i] << " ";
@@ -157,12 +169,11 @@ bool OMPLControlTest::isValid(const ompl::base::State *state) {
     return valid;
 }
 
-bool OMPLControlTest::solve_() {
+bool OMPLControlTest::solve_(double &time_limit) {
     bool solved = false;
-    bool hasExactSolution = false;
-    boost::timer t;
+    bool hasExactSolution = false;    
     while (!solved && !hasExactSolution) {
-        solved = planner_->solve(20.0);
+        solved = planner_->solve(time_limit);
         
         // Get all the solutions
         std::vector<ompl::base::PlannerSolution> solutions = problem_definition_->getSolutions();
@@ -173,12 +184,11 @@ bool OMPLControlTest::solve_() {
             }
         }
         // Check if there's an exact solution
-    }
-    cout << "Solution found in " << t.elapsed() << "seconds" << endl;
+    }   
     return true;
 }
 
-PathControlPtr OMPLControlTest::test() {
+PathControlPtr OMPLControlTest::test(double &time_limit) {
     // Set the start and goal state
     ompl::base::ScopedState<> start_state(state_space_);
     ompl::base::ScopedState<> goal_state(state_space_);
@@ -187,8 +197,8 @@ PathControlPtr OMPLControlTest::test() {
         goal_state[i] = 0.0;
     }
     
-    goal_state[0] = 2.0;
-    goal_state[1] = 1.0;
+    goal_state[0] = M_PI / 2.0;
+    goal_state[1] = 0.0;
 
     const ompl::base::GoalPtr goal_ptr(new ManipulatorGoalState(space_information_, goal_state)); 
     
@@ -199,7 +209,8 @@ PathControlPtr OMPLControlTest::test() {
     planner_->setup();
     bool solved = false;
     
-    solved = solve_();
+    boost::timer t;
+    solved = solve_(time_limit);
     cout << "solved " << endl;
     cout << "Number of solutions found: " << problem_definition_->getSolutionCount() << endl;    
     
@@ -214,9 +225,8 @@ PathControlPtr OMPLControlTest::test() {
         }
         cout << endl;        
         PathControlPtr solution_path_ = 
-            boost::static_pointer_cast<ompl::control::PathControl>(planner_solution.path_);
-        return solution_path_;        
-        /**cout << "Length of solution path " << solution_path_->length() << endl << endl;
+            boost::static_pointer_cast<ompl::control::PathControl>(planner_solution.path_);               
+        cout << "Length of solution path " << solution_path_->length() << endl << endl;
         std::vector<ompl::base::State*> solution_states_(solution_path_->getStates());
         std::vector<ompl::control::Control*> solution_controls_(solution_path_->getControls());
         for (size_t i = 0; i < solution_states_.size(); i++) {
@@ -232,9 +242,12 @@ PathControlPtr OMPLControlTest::test() {
                     cout << solution_controls_[i]->as<ompl::control::RealVectorControlSpace::ControlType>()->values[j] << ", ";
                 }
                 cout << endl;
-            }
-            
-        }*/
+            }            
+        }
+        cout << "Solution found in " << t.elapsed() << "seconds" << endl;
+        cout << "accepted " << accepted_ << endl;
+        cout << "rejected " << rejected_ << endl;
+        return solution_path_; 
     }
 }
 
@@ -266,23 +279,24 @@ void OMPLControlTest::viewControls(PathControlPtr &controls,
         robot->SetDOFValues(start_state);
         robot->SetDOFVelocities(start_vel); 
         sleep(1);
-	for (size_t i = 0; i < control_size; i++) {
+	    for (size_t i = 0; i < control_size; i++) {
             num_control_steps = controls->getControlDuration(i) / simulation_step_size;
-	    for (size_t j = 0; j < num_control_steps; j++) {
-		robot->GetDOFVelocities(current_vel);
-		damper_->damp_torques(current_vel, damped_torques);
-		for (size_t k = 0; k < joints.size(); k++) {
-		    input_torques[k] = controls->getControls()[i]->as<ompl::control::RealVectorControlSpace::ControlType>()->values[k] +
-		                       damped_torques[k];
-		    const std::vector<OpenRAVE::dReal> torques({input_torques[k]});
-		    joints[k]->AddTorque(torques);
-		} 
+	        for (size_t j = 0; j < num_control_steps; j++) {
+		        robot->GetDOFVelocities(current_vel);
+		        damper_->damp_torques(current_vel, damped_torques);
+		        for (size_t k = 0; k < joints.size(); k++) {
+		            input_torques[k] = controls->getControls()[i]->as<ompl::control::RealVectorControlSpace::ControlType>()->values[k] +
+		                               damped_torques[k];
+		            const std::vector<OpenRAVE::dReal> torques({input_torques[k]});
+		            joints[k]->AddTorque(torques);
+		        } 
 		    
-	        env_->StepSimulation(simulation_step_size);        
-		env_->StopSimulation();
-		usleep(1000000 * simulation_step_size);
+	            env_->StepSimulation(simulation_step_size);        
+		        env_->StopSimulation();
+		        usleep(1000000 * simulation_step_size);		        
+	        }
+	        //usleep(1000000 * 0.5);
 	    }
-	}
         sleep(1); 
     }
 }
@@ -330,21 +344,26 @@ void OMPLControlTest::testPhysics(double &simulation_step_size) {
 int main(int argc, char** argv) {
     double coulomb = 0.0;
     double viscous = 1.0;    
-    double control_duration = 0.09;
-    double simulation_step_size = 0.001;
-    const std::string model_file("./lbr_iiwa/urdf/lbr_iiwa_meshfree.urdf");    
+    //double control_duration = 0.07;
+    double control_duration = 0.2;
+    double simulation_step_size = 0.001;    
+    double time_limit = 50.0;
+    bool linear_propagation = true;
+    //const std::string model_file("./lbr_iiwa/urdf/lbr_iiwa_meshfree.urdf");
+    const std::string model_file("test.urdf");
     shared::OMPLControlTest ompl_test(model_file,
                                       control_duration,
                                       simulation_step_size,
                                       coulomb,
-                                      viscous);
+                                      viscous,
+                                      linear_propagation);
     //shared::ViewerTest viewer;
     //OpenRAVE::EnvironmentBasePtr env = ompl_test.getEnvironment(); 
     //viewer.testView(env);    
     //ompl_test.testPhysics(simulation_step_size);    
-    shared::PathControlPtr controls = ompl_test.test();
-    ompl_test.viewControls(controls,
-                           simulation_step_size);
+    shared::PathControlPtr controls = ompl_test.test(time_limit);
+    //ompl_test.viewControls(controls,
+                           //simulation_step_size);
     //OpenRAVE::RaveDestroy();
     return 0;
 }

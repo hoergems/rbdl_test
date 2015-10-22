@@ -40,13 +40,14 @@ namespace shared {
                                 double &control_duration,
                                 double &simulation_step_size,
                                 double &coulomb,
-                                double &viscous);
+                                double &viscous,
+                                bool &linear_propagation);
                             
                 ~OMPLControlTest() { OpenRAVE::RaveDestroy(); }
         	
         	bool isValid(const ompl::base::State *state);
         	
-        	PathControlPtr test();
+        	PathControlPtr test(double &time_limit);
 
                 OpenRAVE::EnvironmentBasePtr getEnvironment();
 
@@ -59,6 +60,10 @@ namespace shared {
 
         private:
                 boost::shared_ptr<TorqueDamper> damper_;
+                
+                double accepted_ = 0.0;
+                
+                double rejected_ = 0.0;
 
                 double control_duration_;
 
@@ -91,9 +96,11 @@ namespace shared {
                 OpenRAVE::EnvironmentBasePtr env_;
 
                 // Solve the motion planning problem
-                bool solve_();
+                bool solve_(double &time_limit);
                 
-                bool setup_ompl_(OpenRAVE::RobotBasePtr &robot, double &simulation_step_size);
+                bool setup_ompl_(OpenRAVE::RobotBasePtr &robot, 
+                		         double &simulation_step_size,
+                		         bool &linear_propagation);
                                    
                 ompl::control::ControlSamplerPtr allocUniformControlSampler_(const ompl::control::ControlSpace *control_space);
     };

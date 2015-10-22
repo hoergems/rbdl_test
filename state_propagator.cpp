@@ -10,14 +10,19 @@ namespace shared {
 
 StatePropagator::StatePropagator(const ompl::control::SpaceInformationPtr &si, 
                                  double &simulation_step_size,
-                                 boost::shared_ptr<TorqueDamper> &damper):
+                                 boost::shared_ptr<TorqueDamper> &damper,
+                                 bool &linear_propagation,
+                                 bool &verbose):
     ompl::control::StatePropagator(si),
     space_information_(si),    
     model_setup_(false),
     environment_(nullptr),
     robot_(nullptr),
     simulation_step_size_(simulation_step_size),
-    damper_(damper)
+    damper_(damper),
+    linear_propagation_(linear_propagation),
+    linear_integrator_(),
+    verbose_(verbose)
 {
     
 }
@@ -26,8 +31,69 @@ void StatePropagator::propagate(const ompl::base::State *state,
                                 const ompl::control::Control *control, 
                                 const double duration, 
                                 ompl::base::State *result) const {
-    unsigned int dim = space_information_->getStateSpace()->getDimension() / 2;   
-    
+    unsigned int dim = space_information_->getStateSpace()->getDimension() / 2;    
+    std::vector<double> current_vel;
+    if (linear_propagation_) {
+    	std::vector<double> thetas_star;
+    	std::vector<double> rhos_star;
+    	std::vector<double> current_state;
+    	std::vector<double> integration_result;
+    	std::vector<double> integration_times({0.0, duration, duration});
+    	for (unsigned int i = 0; i < dim; i++) {
+    		thetas_star.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
+    		current_vel.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i + dim]);    		
+    		rhos_star.push_back(control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[i]);
+    		integration_result.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
+    	}    	
+    	for (unsigned int i = 0; i < dim; i++) {
+    		integration_result.push_back(current_vel[i]);
+    	}
+    	
+    	linear_integrator_.setup(thetas_star, current_vel, rhos_star);
+    	//boost::timer t;
+    	linear_integrator_.do_integration(integration_result, integration_times);
+    	//cout << "Integrated in " << t.elapsed() << "seconds" << endl;
+    	if (verbose_) {
+			cout << "start state: ";
+			for (unsigned int i = 0; i < 2 * dim; i++) { 
+				cout << state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i] << ", ";
+			}
+			cout << endl;  	
+			
+			
+			cout << "control: ";
+			for (unsigned int i = 0; i < dim; i++) { 
+				cout << rhos_star[i] << ", ";
+			}    	
+			cout << endl;
+			
+			cout << "duration: " << duration << endl; 
+			
+			cout << "result: "; 
+			for (unsigned int i = 0; i < 2 * dim; i++) { 
+				cout << integration_result[i] << ", ";
+			} 
+			cout << endl;
+			cout << "=================================" << endl;
+			sleep(1);
+    	}
+    	
+    	for (unsigned int i = 0; i < dim; i++) {
+    		if (integration_result[i] > M_PI) {
+    			integration_result[i] = -2.0 * M_PI + integration_result[i]; 
+    			//integration_result[i] = integration_result[i] - 2.0 * M_PI;
+    		}
+    		else if (integration_result[i] < -M_PI) {
+    			integration_result[i] = 2.0 * M_PI + integration_result[i];
+    			//integration_result[i] = integration_result[i] + 2.0 * M_PI;
+    		}
+    	}
+    	
+    	for (unsigned int i = 0; i < 2 * dim; i++) {
+    	    result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i] = integration_result[i];
+    	}
+    	return;
+    }
                                 
     /**cout << "State: ";
     for (unsigned int i = 0; i < dim * 2.0; i++) {
@@ -44,8 +110,7 @@ void StatePropagator::propagate(const ompl::base::State *state,
     
                                 
     std::vector<OpenRAVE::dReal> currentJointValuesTemp;
-    std::vector<OpenRAVE::dReal> currentJointVelocitiesTemp;
-    std::vector<double> current_vel;    
+    std::vector<OpenRAVE::dReal> currentJointVelocitiesTemp;        
     
     
     const std::vector<OpenRAVE::KinBody::JointPtr> joints(robot_->GetJoints());    

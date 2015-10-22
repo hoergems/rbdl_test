@@ -1,6 +1,7 @@
 #ifndef STATE_PROPAGATOR_TEST_HPP_
 #define STATE_PROPAGATOR_TEST_HPP_
 #include <iostream>
+#include <boost/timer.hpp>
 #include <rbdl/rbdl.h>
 #include <rbdl/addons/urdfreader/urdfreader.h>
 #include <ompl/control/ControlSpace.h>
@@ -15,6 +16,7 @@
 #include <openrave/environment.h>
 
 #include "torque_damper.hpp"
+#include "integrate.hpp"
 
 namespace RBD = RigidBodyDynamics;
 
@@ -23,7 +25,9 @@ namespace shared {
         public:
             StatePropagator(const ompl::control::SpaceInformationPtr &si, 
                             double &simulation_step_size,
-                            boost::shared_ptr<TorqueDamper> &damper);
+                            boost::shared_ptr<TorqueDamper> &damper,
+                            bool &linear_propagation,
+                            bool &verbose);
             
             void propagate(const ompl::base::State *state, 
                            const ompl::control::Control *control, 
@@ -59,6 +63,13 @@ namespace shared {
             double simulation_step_size_;
             
             boost::shared_ptr<TorqueDamper> damper_;
+            
+            // Determines is a linear model has to be used for state propagation
+            bool linear_propagation_;
+            
+            Integrate linear_integrator_;
+            
+            bool verbose_;
 
             std::vector<std::vector<OpenRAVE::dReal>> jointsLowerPositionLimit_; 
             std::vector<std::vector<OpenRAVE::dReal>> jointsUpperPositionLimit_;

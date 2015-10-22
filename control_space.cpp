@@ -11,5 +11,4 @@ ControlSpace::ControlSpace(const ompl::base::StateSpacePtr &stateSpace, unsigned
 ompl::control::ControlSamplerPtr ControlSpace::allocDefaultControlSampler() const {    
     return ompl::control::ControlSamplerPtr(new UniformControlSampler(this));
 }
-
 }
