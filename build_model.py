@@ -19,17 +19,16 @@ class Test:
         Get the Jacobians of the links expressed in the robot's base frame
         """
         print "Calculating Jacobian matrices"
-        Jvs, Ocs = self.get_link_jacobians(self.joint_origins, self.inertial_poses, self.joint_axis, self.q) 
-              
-        M_is = self.construct_link_inertia_matrices(self.link_masses, self.Is)
+        Jvs, Ocs = self.get_link_jacobians(self.joint_origins, self.inertial_poses, self.joint_axis, self.q)
+        M_is = self.construct_link_inertia_matrices(self.link_masses, self.Is)        
         print "Calculating inertia matrix"
-        M = self.calc_inertia_matrix(Jvs, M_is)
+        M = self.calc_inertia_matrix(Jvs, M_is)        
         if self.simplifying:
-            M = simplify(M)            
+            M = trigsimp(M)            
         print "Calculating coriolis matrix"
         C = self.calc_coriolis_matrix(self.q, self.qdot, M)
         if self.simplifying:
-            C = simplify(C)
+            C = trigsimp(C)
         print "Calculating normal forces" 
         N = self.calc_generalized_forces(self.q,
                                          self.qdot, 
@@ -37,34 +36,31 @@ class Test:
                                          self.link_masses, 
                                          g) 
         if self.simplifying:      
-            N = simplify(N)
+            N = trigsimp(N)
         print "Get dynamic model"
-        f = self.get_dynamic_model(M, C, N, self.q, self.qdot, self.rho)
+        f, M_inv = self.get_dynamic_model(M, C, N, self.q, self.qdot, self.rho)
         print "Build taylor approximation"        
-        fot = self.taylor_approximation(f, 
-                                        self.q, 
-                                        self.qdot, 
-                                        self.qstar, 
-                                        self.qdotstar, 
-                                        self.rho,
-                                        self.rhostar)
-        print "Generating c++ code..."        
-        self.gen_cpp_code(fot)
+        (f, A1, A2, A3, B1, C1) = self.partial_derivatives(f,
+                                                           M_inv,
+                                                           C,
+                                                           N,
+                                                           self.q,
+                                                           self.qdot,
+                                                           self.rho,
+                                                           self.qstar, 
+                                                           self.qdotstar, 
+                                                           self.rhostar)
+        
+        self.gen_cpp_code2(A1, "A1")
+        self.gen_cpp_code2(A2, "A2")
+        self.gen_cpp_code2(A3, "A3")
+        self.gen_cpp_code2(B1, "B1")
+        self.gen_cpp_code2(C1, "C1")
+        self.gen_cpp_code2(f, "f")
         if buildcpp:
             cmd = "cd build && cmake .. && make -j8"           
             os.system(cmd)
         print "Done"
-        """
-        Substitude all parameters here
-        """
-        
-        """
-        Call test_fot2
-        """
-        
-        """
-        Generate c++ code
-        """
         
     def parse_urdf(self, xml_file):
         robot = Robot(xml_file)
@@ -75,7 +71,7 @@ class Test:
         
         joint_names = v_string()
         robot.getJointNames(joint_names)
-        self.joint_names = [joint_names[i] for i in xrange(len(joint_names))]           
+        self.joint_names = [joint_names[i] for i in xrange(len(joint_names))]                 
         
         joint_type = v_string()
         robot.getJointType(joint_names, joint_type)
@@ -104,6 +100,7 @@ class Test:
             symb_string_q_dot_star = "dot_thetas_star_[" + str(i) + "]"
             symb_string_r = "rho[" + str(i) + "]"
             symb_string_r_star = "rhos_star_[" + str(i) + "]"
+            
             self.q.append(symbols(symb_string_q))
             self.qdot.append(symbols(symb_string_q_dot))
             self.rho.append(symbols(symb_string_r))
@@ -135,7 +132,42 @@ class Test:
         self.Is = [[self.link_inertias[i][0],
                     self.link_inertias[i][4],
                     self.link_inertias[i][8]]for i in xrange(len(self.link_inertias))]              
-        
+     
+    def gen_cpp_code2(self, Matr, name):
+        lines = list(open("integrate.cpp", 'r'))
+        temp_lines = []
+        if Matr.shape[1] != 1:
+            temp_lines.append("MatrixXd m(" + str(Matr.shape[0]) + ", " + str(Matr.shape[1]) + "); \n")
+        else:
+            temp_lines.append("VectorXd m(" + str(Matr.shape[0]) + "); \n")        
+        for i in xrange(Matr.shape[0]):
+            for j in xrange(Matr.shape[1]):
+                temp_lines.append("m(" + str(i) + ", " + str(j) + ") = " + str(ccode(Matr[i, j])) + "; \n")        
+        temp_lines.append("return m; \n")
+        idx1 = -1
+        idx2 = -1
+        breaking = False    
+        for i in xrange(len(lines)):
+            if "Integrate::get" + name in lines[i]:                
+                idx1 = i + 1               
+                breaking = True
+            elif "}" in lines[i]:
+                idx2 = i - 1
+                if breaking:
+                    break        
+        del lines[idx1:idx2]
+        idx = -1
+        for i in xrange(len(lines)):
+            if "Integrate::get" + name in lines[i]:
+                idx = i        
+        lines[idx+1:idx+1] = temp_lines        
+        os.remove("integrate.cpp")
+        with open("integrate.cpp", 'a+') as f:
+            for line in lines:
+                f.write(line)
+                            
+            
+                
     def gen_cpp_code(self, fot):
         lines = list(open("integrate.cpp", 'r'))
         idx1 = -1 
@@ -178,28 +210,92 @@ class Test:
         t0 = time.time()
         M_inv = M.inv("LU")
         if self.simplifying:
-            M_inv = simplify(M_inv)
+            M_inv = trigsimp(M_inv)
         print "time to invert: " + str(time.time() - t0)        
         Thetas = Matrix([[thetas[i]] for i in xrange(len(thetas) - 1)])
         Dotthetas = Matrix([[dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
         Rs = Matrix([[rs[i]] for i in xrange(len(rs) - 1)])
         print "Constructing non-linear differential equation"
-        m_upper = Matrix([dot_thetas[i] for i in xrange(len(dot_thetas) - 1)])
+        m_upper = Matrix([[dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
         m_lower = 0
         if self.simplifying:
-            m_lower = simplify(-M_inv * simplify(C * Dotthetas + N) + M_inv * Rs) 
-        else:
-            m_lower = -M_inv * (C * Dotthetas + N) + M_inv * Rs 
+            m_lower = trigsimp(-M_inv * trigsimp(C * Dotthetas + N) + M_inv * Rs) 
+            
+        else:            
+            #m_lower = -M_inv * (C * Dotthetas + N) + M_inv * Rs 
+            m_lower = M_inv * (Rs - C * Dotthetas - N)
             #m_lower = (C * Dotthetas) #+ M_inv * Rs                   
         h = m_upper.col_join(m_lower)        
-        return h
+        return h, M_inv
+    
+    def partial_derivatives(self,
+                            f, 
+                            M_inv, 
+                            C, 
+                            N, 
+                            thetas, 
+                            dot_thetas, 
+                            rs, 
+                            thetas_star,
+                            dot_thetas_star,
+                            rs_star):
+        q = Matrix([[thetas[i]] for i in xrange(len(thetas) - 1)])
+        dot_q = Matrix([[dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
+        r = Matrix([[rs[i]] for i in xrange(len(rs) - 1)])
+        
+        q_star = Matrix([[thetas_star[i]] for i in xrange(len(thetas_star) - 1)])
+        dot_q_star = Matrix([[dot_thetas_star[i]] for i in xrange(len(dot_thetas_star) - 1)])
+        r_star = Matrix([[rs_star[i]] for i in xrange(len(rs_star) - 1)])
+        
+        A1 = M_inv * r
+        A2 = -M_inv * C * dot_q
+        A3 = -M_inv * N 
+        if self.simplifying:
+            A1 = trigsimp(A1)
+            A2 = trigsimp(A2)
+            A3 = trigsimp(A3)                   
+        A1 = A1.jacobian([thetas[i] for i in xrange(len(thetas) - 1)])
+        A2 = A2.jacobian([thetas[i] for i in xrange(len(thetas) - 1)])
+        A3 = A3.jacobian([thetas[i] for i in xrange(len(thetas) - 1)])
+        
+        B1 = -M_inv * C * dot_q
+        B1 = B1.jacobian([dot_thetas[i] for i in xrange(len(dot_thetas) - 1)])       
+        
+        C1 = M_inv * r        
+        C1 = C1.jacobian([rs[i] for i in xrange(len(rs) - 1)])
+        
+        for i in xrange(len(thetas) - 1):
+            A1 = A1.subs(thetas[i], thetas_star[i])
+            A1 = A1.subs(dot_thetas[i], dot_thetas_star[i])
+            A1 = A1.subs(rs[i], rs_star[i])
+            
+            A2 = A2.subs(thetas[i], thetas_star[i])
+            A2 = A2.subs(dot_thetas[i], dot_thetas_star[i])
+            A2 = A2.subs(rs[i], rs_star[i])
+            
+            A3 = A3.subs(thetas[i], thetas_star[i])
+            A3 = A3.subs(dot_thetas[i], dot_thetas_star[i])
+            A3 = A3.subs(rs[i], rs_star[i])
+            
+            B1 = B1.subs(thetas[i], thetas_star[i])
+            B1 = B1.subs(dot_thetas[i], dot_thetas_star[i])
+            B1 = B1.subs(rs[i], rs_star[i])
+           
+            C1 = C1.subs(thetas[i], dot_thetas[i])
+            C1 = C1.subs(dot_thetas[i], dot_thetas_star[i])
+            C1 = C1.subs(rs[i], rs_star[i])
+            
+            f = f.subs(thetas[i], thetas_star[i])
+            f = f.subs(dot_thetas[i], dot_thetas_star[i])
+            f = f.subs(rs[i], rs_star[i])   
+        return (f, A1, A2, A3, B1, C1)
+         
         
     def taylor_approximation(self, f, thetas, dot_thetas, thetas_star, dot_thetas_star, rs, rs_star):        
-        print "Calculate partial derivatives..."        
-              
-        A = f.jacobian([thetas[i] for i in xrange(len(thetas) - 1)])
+        print "Calculate partial derivatives..."
+        A = f.jacobian([thetas[i] for i in xrange(len(thetas) - 1)])        
         B = f.jacobian([dot_thetas[i] for i in xrange(len(dot_thetas) - 1)])
-        #C = f.jacobian([rs[i] for i in xrange(len(rs) - 1)])
+        C = f.jacobian([rs[i] for i in xrange(len(rs) - 1)])
         for i in xrange(len(thetas) - 1):
             A = A.subs(thetas[i], thetas_star[i])
             A = A.subs(dot_thetas[i], dot_thetas_star[i])
@@ -209,21 +305,20 @@ class Test:
             B = B.subs(dot_thetas[i], dot_thetas_star[i])
             B = B.subs(rs[i], rs_star[i])
             
-            #C = C.subs(thetas[i], dot_thetas[i])
-            #C = C.subs(dot_thetas[i], dot_thetas_star[i])
-            #C = C.subs(rs[i], rs_star[i])
+            C = C.subs(thetas[i], dot_thetas[i])
+            C = C.subs(dot_thetas[i], dot_thetas_star[i])
+            C = C.subs(rs[i], rs_star[i])
             
             f = f.subs(thetas[i], thetas_star[i])
             f = f.subs(dot_thetas[i], dot_thetas_star[i])
             f = f.subs(rs[i], rs_star[i])
-        
+            
         if self.simplifying:
             print "Simplifying Jacobians..."         
-            A = simplify(A)
-            B = simplify(B)
-            #C = simplify(C)        
-        
-        q = Matrix([[thetas[i]] for i in xrange(len(thetas) - 1)])
+            A = trigsimp(A)
+            B = trigsimp(B)
+            C = trigsimp(C)
+        q = Matrix([[thetas[i]] for i in xrange(len(thetas) - 1)])        
         dot_q = Matrix([[dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
         r = Matrix([[rs[i]] for i in xrange(len(rs) - 1)])
         
@@ -232,8 +327,8 @@ class Test:
         r_star = Matrix([[rs_star[i]] for i in xrange(len(rs_star) - 1)])        
         
         #sleep
-        "Construct Taylor approximation..."       
-        fot = f + A * (q - q_star) + B * (dot_q - dot_q_star) #+ C * (r - r_star)        
+        "Construct Taylor approximation..."
+        fot = f + A * (q - q_star) + B * (dot_q - dot_q_star) + C * (r - r_star)
         return fot
         
     def test_fot(self, f):
@@ -258,7 +353,7 @@ class Test:
                                              r_star)        
         q_star.extend(qdot_star)
         q_star.extend(r_star)
-        print simplify(fot)
+        print trigsimp(fot)
         for i in xrange(len(q_star)):
             fot = fot.subs(q_star[i], self.initial[0])
         
@@ -285,7 +380,7 @@ class Test:
         
         N = 0
         if self.simplifying:    
-            N = Matrix([[simplify(diff(V, thetas[i]))] for i in xrange(len(thetas) - 1)]) 
+            N = Matrix([[trigsimp(diff(V, thetas[i]))] for i in xrange(len(thetas) - 1)]) 
         else:
             N = Matrix([[diff(V, thetas[i])] for i in xrange(len(thetas) - 1)])        
         return N        
@@ -297,18 +392,18 @@ class Test:
                 val = 0.0
                 for k in xrange(len(thetas) - 1): 
                     if self.simplifying:                                             
-                        val += simplify(self.calc_christoffel_symbol(i, j, k, thetas, M) * dot_thetas[k])
-                    else:
-                        val += self.calc_christoffel_symbol(i, j, k, thetas, M) * dot_thetas[k]
-                C[i, j] = val                
+                        val += trigsimp(self.calc_christoffel_symbol(i, j, k, thetas, M) * dot_thetas[k])
+                    else:                        
+                        val += self.calc_christoffel_symbol(i, j, k, thetas, M) * dot_thetas[k]                
+                C[i, j] = val                            
         return C   
     
     def calc_christoffel_symbol(self, i, j, k, thetas, M):
         t_i_j_k = 0.0
         if self.simplifying:
-            t_i_j_k = 0.5 * (simplify(diff(M[i, j], thetas[k])) + 
-                             simplify(diff(M[i, k], thetas[j])) -
-                             simplify(diff(M[k, j], thetas[i])))
+            t_i_j_k = 0.5 * (trigsimp(diff(M[i, j], thetas[k])) + 
+                             trigsimp(diff(M[i, k], thetas[j])) -
+                             trigsimp(diff(M[k, j], thetas[i])))
         else:
             t_i_j_k = 0.5 * (diff(M[i, j], thetas[k]) + 
                              diff(M[i, k], thetas[j]) -
@@ -319,7 +414,7 @@ class Test:
         res = Matrix([[0.0 for n in xrange(len(Jvs))] for m in xrange(len(Jvs))])
         for i in xrange(len(Jvs)):
             if self.simplifying:
-                res += simplify(Jvs[i].transpose() * M_is[i] * Jvs[i])
+                res += trigsimp(Jvs[i].transpose() * M_is[i] * Jvs[i])
             else:
                 res += Jvs[i].transpose() * M_is[i] * Jvs[i]        
         return res
@@ -336,7 +431,7 @@ class Test:
     def get_link_jacobians(self, joint_origins, com_coordinates, axis, thetas):
         """
         Vectors from the center of mass to the next joint origin        
-        """
+        """        
         com_coordinates = [Matrix([[com_coordinates[i][j]] for j in xrange(len(com_coordinates[i]))]) 
                            for i in xrange(len(com_coordinates))]
         m_to_joint_vectors = [Matrix([[joint_origins[i][0]],
@@ -369,7 +464,7 @@ class Test:
                                com_coordinates[i + 1][2], 
                                joint_origins[i][3] + axis[i][0] * thetas[i], 
                                joint_origins[i][4] + axis[i][1] * thetas[i], 
-                               joint_origins[i][5] + axis[i][2] * thetas[i]) for i in xrange(len(joint_origins) -1)]
+                               joint_origins[i][5] + axis[i][2] * thetas[i]) for i in xrange(len(joint_origins) -1)]        
         
         """
         O and z of the first joint
@@ -393,26 +488,26 @@ class Test:
             col4 = res.col(3)            
             z = Matrix([col3[j] for j in xrange(3)])
             O = Matrix([col4[j] for j in xrange(3)])
-            Ocs.append(simplify(O))
+            Ocs.append(trigsimp(O))
             zcs.append(z)
             res = res * trans_matrices2[i]            
             col3 = res.col(2)
             col4 = res.col(3)            
             z = Matrix([col3[j] for j in xrange(3)])
             O = Matrix([col4[j] for j in xrange(3)])
-            Os.append(simplify(O))
+            Os.append(trigsimp(O))
             zs.append(z)        
-        #r1 = simplify(Matrix([zcs[0].cross(Ocs[1] - Os[1])]))
+        #r1 = trigsimp(Matrix([zcs[0].cross(Ocs[1] - Os[1])]))
         Jvs = []
         for i in xrange(len(thetas) - 1):
             Jv = Matrix([[0.0 for m in xrange(len(thetas) - 1)] for n in xrange(6)])
             for k in xrange(i + 1):
-                r1 = simplify(Matrix(zcs[i].cross(Ocs[i] - Os[k])))                
+                r1 = trigsimp(Matrix(zcs[i].cross(Ocs[i] - Os[k])))                
                 for t in xrange(3):
                     Jv[t, k] = r1[t, 0]
                     Jv[t + 3, k] = zcs[i][t, 0]
             
-            Jvs.append(simplify(Jv))                
+            Jvs.append(trigsimp(Jv))                
         return Jvs, Ocs
     
     def transform(self, x, y, z, r, p, yaw):

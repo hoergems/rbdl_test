@@ -123,6 +123,9 @@ void StatePropagator::propagate(const ompl::base::State *state,
         damped_torques.push_back(0);               
     }
     
+    currentJointValuesTemp.push_back(0.0);
+    currentJointVelocitiesTemp.push_back(0.0);
+    
     const std::vector<OpenRAVE::dReal> currentJointValues(currentJointValuesTemp);
     const std::vector<OpenRAVE::dReal> currentJointVelocities(currentJointVelocitiesTemp);
     

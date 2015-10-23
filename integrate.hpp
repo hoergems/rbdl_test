@@ -1,6 +1,6 @@
 #ifndef INTEGRATE_HPP_
 #define INTEGRATE_HPP_
-
+#include <Eigen/Dense>
 #include <list>
 #include <boost/python.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
@@ -8,7 +8,10 @@
 #include <boost/numeric/odeint/stepper/runge_kutta4.hpp>
 #include <boost/numeric/odeint/integrate/integrate_const.hpp>
 
+
 namespace pl = std::placeholders;
+
+using namespace Eigen;
 
 namespace shared {
 
@@ -26,7 +29,23 @@ namespace shared {
     			   std::vector<double> &dot_thetas_star, 
     			   std::vector<double> &rhos_star) const;
     	
+    	std::vector<double> getResult();
+    	
     private:
+    	
+    	MatrixXd getA() const;
+    	MatrixXd getB() const;
+    	MatrixXd getC() const;
+    	
+    	MatrixXd getA1() const;
+    	MatrixXd getA2() const;
+    	MatrixXd getA3() const;
+    	
+    	MatrixXd getB1() const;
+    	MatrixXd getC1() const;
+    	
+    	VectorXd getf() const;
+    	
     	mutable std::vector<double> thetas_star_;
     	
     	mutable std::vector<double> dot_thetas_star_;
@@ -34,6 +53,8 @@ namespace shared {
     	mutable std::vector<double> rhos_star_;
     	
     	mutable std::vector<double> rho;
+    	
+    	mutable std::vector<double> result_;
     	
     	
     };

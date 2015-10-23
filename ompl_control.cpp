@@ -348,7 +348,7 @@ int main(int argc, char** argv) {
     double control_duration = 0.2;
     double simulation_step_size = 0.001;    
     double time_limit = 50.0;
-    bool linear_propagation = true;
+    bool linear_propagation = false;
     //const std::string model_file("./lbr_iiwa/urdf/lbr_iiwa_meshfree.urdf");
     const std::string model_file("test.urdf");
     shared::OMPLControlTest ompl_test(model_file,

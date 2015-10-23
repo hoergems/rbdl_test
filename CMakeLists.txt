@@ -24,6 +24,8 @@ link_directories(/usr/lib /usr/local/lib /opt/ros/indigo/lib)
 # link the libraries to the executable
 add_library(robot SHARED robot.cpp)
 
+add_library(integrate SHARED integrate.cpp)
+
 add_executable(ompl_test 
                ompl_control.cpp 
                state_propagator.cpp
@@ -46,6 +48,10 @@ target_link_libraries (ompl_test
                        boost_thread)
 target_link_libraries (robot
                        urdf
+                       boost_system
+                       boost_python
+                       python2.7)
+target_link_libraries (integrate
                        boost_system
                        boost_python
                        python2.7)
