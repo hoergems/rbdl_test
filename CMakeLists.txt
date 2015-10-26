@@ -29,6 +29,7 @@ add_library(integrate SHARED integrate.cpp)
 add_executable(ompl_test 
                ompl_control.cpp 
                state_propagator.cpp
+               propagator.cpp
                integrate.cpp 
                goal.cpp 
                viewer.cpp 

@@ -9,8 +9,7 @@ using namespace RigidBodyDynamics::Math;
 namespace shared {
 
 StatePropagator::StatePropagator(const ompl::control::SpaceInformationPtr &si, 
-                                 double &simulation_step_size,
-                                 boost::shared_ptr<TorqueDamper> &damper,
+                                 double &simulation_step_size,                                 
                                  bool &linear_propagation,
                                  bool &verbose):
     ompl::control::StatePropagator(si),
@@ -18,8 +17,8 @@ StatePropagator::StatePropagator(const ompl::control::SpaceInformationPtr &si,
     model_setup_(false),
     environment_(nullptr),
     robot_(nullptr),
-    simulation_step_size_(simulation_step_size),
-    damper_(damper),
+    propagator_(new Propagator()),
+    simulation_step_size_(simulation_step_size),    
     linear_propagation_(linear_propagation),
     linear_integrator_(),
     verbose_(verbose)
@@ -30,7 +29,7 @@ StatePropagator::StatePropagator(const ompl::control::SpaceInformationPtr &si,
 void StatePropagator::propagate(const ompl::base::State *state, 
                                 const ompl::control::Control *control, 
                                 const double duration, 
-                                ompl::base::State *result) const {
+                                ompl::base::State *result) const {	
     unsigned int dim = space_information_->getStateSpace()->getDimension() / 2;    
     std::vector<double> current_vel;
     if (linear_propagation_) {
@@ -95,7 +94,7 @@ void StatePropagator::propagate(const ompl::base::State *state,
     	return;
     }
                                 
-    /**cout << "State: ";
+    cout << "State: ";
     for (unsigned int i = 0; i < dim * 2.0; i++) {
         cout << " " << state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i];
     }
@@ -105,87 +104,44 @@ void StatePropagator::propagate(const ompl::base::State *state,
     for (unsigned int i = 0; i < dim; i++) {
         cout << " " << control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[i];
     }
-    cout << endl;*/
+    cout << endl;
 
     
                                 
-    std::vector<OpenRAVE::dReal> currentJointValuesTemp;
-    std::vector<OpenRAVE::dReal> currentJointVelocitiesTemp;        
-    
-    
-    const std::vector<OpenRAVE::KinBody::JointPtr> joints(robot_->GetJoints());    
-    std::vector<OpenRAVE::dReal> input_torques;
-    std::vector<OpenRAVE::dReal> damped_torques;
-    for (unsigned int i = 0; i < dim; i++) {
-        currentJointValuesTemp.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
-        currentJointVelocitiesTemp.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i + dim]);
-        input_torques.push_back(0);
-        damped_torques.push_back(0);               
-    }
-    
-    currentJointValuesTemp.push_back(0.0);
-    currentJointVelocitiesTemp.push_back(0.0);
-    
-    const std::vector<OpenRAVE::dReal> currentJointValues(currentJointValuesTemp);
-    const std::vector<OpenRAVE::dReal> currentJointVelocities(currentJointVelocitiesTemp);
-    
-    
-    robot_->SetDOFValues(currentJointValues);
-    robot_->SetDOFVelocities(currentJointVelocities);    
-    
-    int num_steps = duration / simulation_step_size_;
-    for (unsigned int i = 0; i < num_steps; i++) {
-        robot_->GetDOFVelocities(current_vel);
-        damper_->damp_torques(current_vel,
-                              damped_torques);
-        for (size_t k = 0; k < joints.size(); k++) {
-            input_torques[k] = control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[k] +
-                               damped_torques[k];
-            const std::vector<OpenRAVE::dReal> torques({input_torques[k]});
-            joints[k]->AddTorque(torques);
-        }        
-        environment_->StepSimulation(simulation_step_size_);
-        environment_->StopSimulation();
-    }
-    
-    
-    //cout << "end sim time " << environment_->GetSimulationTime() * 1e-6 << endl;
-    
-    std::vector<OpenRAVE::dReal> newJointValues;
-    std::vector<OpenRAVE::dReal> newJointVelocities;
-    
-    robot_->GetDOFValues(newJointValues);
-    robot_->GetDOFVelocities(newJointVelocities);
-
-    //Enforce position limits
-    for (unsigned int i = 0; i < dim; i++) {
-        if (newJointValues[i] < jointsLowerPositionLimit_[i][0]) {
-           newJointValues[i] = jointsLowerPositionLimit_[i][0];
-        }
-        else if (newJointValues[i] > jointsUpperPositionLimit_[i][0]) {
-           newJointValues[i] = jointsUpperPositionLimit_[i][0];
-        }
-
-        if (newJointVelocities[i] < jointsLowerVelocityLimit_[i][0]) {
-           newJointVelocities[i] = jointsLowerVelocityLimit_[i][0];
-        }
-        else if (newJointVelocities[i] > jointsUpperVelocityLimit_[i][0]) {
-           newJointVelocities[i] = jointsUpperVelocityLimit_[i][0];
-        }
-        
-    }
+    std::vector<OpenRAVE::dReal> current_joint_values;
+    std::vector<OpenRAVE::dReal> current_joint_velocities;
+    std::vector<double> input_torque;
     
     for (unsigned int i = 0; i < dim; i++) {
-        result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i] = newJointValues[i];
-        result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i + dim] = newJointVelocities[i];
+    	current_joint_values.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
+    	current_joint_velocities.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i + dim]);
+    	input_torque.push_back(control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[i]);
     }
     
-    /**cout << "result ";
-    for (unsigned int i = 0; i < 2 * dim; i++) {
-        cout << " " << result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i];
+    current_joint_values.push_back(0.0);
+    current_joint_velocities.push_back(0.0); 
+    
+    
+    
+    std::vector<double> propagation_result;
+    propagator_->propagate_nonlinear(environment_,
+    		                         robot_,
+    		                         current_joint_values,
+    		                         current_joint_velocities,
+    		                         input_torque,
+    		                         simulation_step_size_,
+    		                         duration,
+    		                         propagation_result);
+    cout << "Propagation result: ";
+    for (size_t i = 0; i < propagation_result.size(); i++) {
+    	cout << propagation_result[i] << ", ";
     }
     cout << endl;
-    sleep(1);*/             
+    sleep(2);
+    for (unsigned int i = 0; i < dim; i++) {
+        result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i] = propagation_result[i];
+        result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i + dim] = propagation_result[i + dim];
+    }       
 }
 
 bool StatePropagator::canPropagateBackward() const{
@@ -204,10 +160,17 @@ bool StatePropagator::canSteer() const {
 }
 
 bool StatePropagator::setupOpenRAVEEnvironment(OpenRAVE::EnvironmentBasePtr environment,
-                                               OpenRAVE::RobotBasePtr robot) {
+                                               OpenRAVE::RobotBasePtr robot,
+                                               double &coulomb,
+                                               double &viscous) {
+	cout << "setup openrave" << endl;
     environment_ = environment;
     robot_ = robot;
     const std::vector<OpenRAVE::KinBody::JointPtr> joints(robot_->GetJoints());
+    std::vector<double> jointsLowerPositionLimit; 
+    std::vector<double> jointsUpperPositionLimit;
+    std::vector<double> jointsLowerVelocityLimit; 
+    std::vector<double> jointsUpperVelocityLimit;
     for (size_t i = 0; i < joints.size(); i++) {
         std::vector<OpenRAVE::dReal> jointLowerLimit;
         std::vector<OpenRAVE::dReal> jointUpperLimit;
@@ -215,11 +178,17 @@ bool StatePropagator::setupOpenRAVEEnvironment(OpenRAVE::EnvironmentBasePtr envi
         std::vector<OpenRAVE::dReal> jointUpperVelLimit;
         joints[i]->GetLimits(jointLowerLimit, jointUpperLimit);
         joints[i]->GetVelocityLimits(jointLowerVelLimit, jointUpperVelLimit);
-        jointsLowerPositionLimit_.push_back(jointLowerLimit);
-        jointsUpperPositionLimit_.push_back(jointUpperLimit);
-        jointsLowerVelocityLimit_.push_back(jointLowerVelLimit);
-        jointsUpperVelocityLimit_.push_back(jointUpperVelLimit);        
+        jointsLowerPositionLimit.push_back(jointLowerLimit[0]);
+        jointsUpperPositionLimit.push_back(jointUpperLimit[0]);
+        jointsLowerVelocityLimit.push_back(jointLowerVelLimit[0]);
+        jointsUpperVelocityLimit.push_back(jointUpperVelLimit[0]);        
     }
+    propagator_->setup(coulomb, 
+    		           viscous,
+    		           jointsLowerPositionLimit,
+    		           jointsUpperPositionLimit,
+    		           jointsLowerVelocityLimit,
+    		           jointsUpperVelocityLimit);
     model_setup_ = true;
     return model_setup_;
 }

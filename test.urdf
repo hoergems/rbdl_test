@@ -5,7 +5,7 @@
     <link name="link1">
     <inertial>
       <origin rpy="0 0 0" xyz="0.5 0 0"/>
-      <mass value="5"/>
+      <mass value="1"/>
       <inertia ixx="0.05" ixy="0" ixz="0" iyy="0.06" iyz="0" izz="0.03"/>
     </inertial>
     <visual>
@@ -27,7 +27,7 @@
     <link name="link2">
     <inertial>
       <origin rpy="0 0 0" xyz="0.5 0 0"/>
-      <mass value="5"/>
+      <mass value="1"/>
       <inertia ixx="0.05" ixy="0" ixz="0" iyy="0.06" iyz="0" izz="0.03"/>
     </inertial>
     <visual>
@@ -75,7 +75,7 @@
     <child link="link1"/>
     <origin rpy="0 0 0" xyz="0 0 0"/>
     <axis xyz="0 0 1"/>
-    <limit effort="20" lower="-3.14159265359" upper="3.14159265359" velocity="10"/>    
+    <limit effort="70" lower="-3.14159265359" upper="3.14159265359" velocity="20"/>    
     <dynamics damping="0.5"/>
   </joint>
 
@@ -84,7 +84,7 @@
     <child link="link2"/>
     <origin rpy="0 0 0" xyz="1 0 0"/>
     <axis xyz="0 0 1"/>
-    <limit effort="1" lower="-3.14159265359" upper="3.14159265359" velocity="10"/>    
+    <limit effort="50" lower="-3.14159265359" upper="3.14159265359" velocity="20"/>    
     <dynamics damping="0.5"/>
   </joint>
 
@@ -93,11 +93,11 @@
     <child link="end_effector"/>
     <origin rpy="0 0 0" xyz="1 0 0"/>
     <axis xyz="0 0 1"/>
-    <limit effort="1" lower="-3.14159265359" upper="3.14159265359" velocity="20"/>    
+    <limit effort="20" lower="-3.14159265359" upper="3.14159265359" velocity="20"/>    
     <dynamics damping="0.5"/>
   </joint>
 
-  <!--joint name="joint4" type="revolute">    
+  <!--joint name="joint4" type="fixed">    
     <parent link="link3"/>
     <child link="end_effector"/>
     <origin rpy="0 0 0" xyz="1 0 0"/>

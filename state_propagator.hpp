@@ -15,7 +15,7 @@
 #include <openrave-core.h>
 #include <openrave/environment.h>
 
-#include "torque_damper.hpp"
+#include "propagator.hpp"
 #include "integrate.hpp"
 
 namespace RBD = RigidBodyDynamics;
@@ -24,8 +24,7 @@ namespace shared {
     class StatePropagator: public ompl::control::StatePropagator {
         public:
             StatePropagator(const ompl::control::SpaceInformationPtr &si, 
-                            double &simulation_step_size,
-                            boost::shared_ptr<TorqueDamper> &damper,
+                            double &simulation_step_size,                            
                             bool &linear_propagation,
                             bool &verbose);
             
@@ -44,7 +43,9 @@ namespace shared {
             bool canSteer() const;
             
             bool setupOpenRAVEEnvironment(OpenRAVE::EnvironmentBasePtr environment,
-                                          OpenRAVE::RobotBasePtr robot);
+                                          OpenRAVE::RobotBasePtr robot,                                          
+                                          double &coulomb,
+                                          double &viscous);
             
         private:
             // The OMPL spacei information associated with this state propagator
@@ -59,22 +60,17 @@ namespace shared {
             // The robot model
             OpenRAVE::RobotBasePtr robot_;
             
+            std::shared_ptr<Propagator> propagator_;
+            
             // The simulation step size
             double simulation_step_size_;
-            
-            boost::shared_ptr<TorqueDamper> damper_;
             
             // Determines is a linear model has to be used for state propagation
             bool linear_propagation_;
             
             Integrate linear_integrator_;
             
-            bool verbose_;
-
-            std::vector<std::vector<OpenRAVE::dReal>> jointsLowerPositionLimit_; 
-            std::vector<std::vector<OpenRAVE::dReal>> jointsUpperPositionLimit_;
-            std::vector<std::vector<OpenRAVE::dReal>> jointsLowerVelocityLimit_; 
-            std::vector<std::vector<OpenRAVE::dReal>> jointsUpperVelocityLimit_;  
+            bool verbose_;              
     };
 
 }

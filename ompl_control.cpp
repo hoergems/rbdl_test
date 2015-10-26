@@ -10,8 +10,7 @@ OMPLControlTest::OMPLControlTest(const std::string &model_file,
                                  double &simulation_step_size,
                                  double &coulomb,
                                  double &viscous,
-                                 bool &linear_propagation):
-    damper_(new TorqueDamper(coulomb, viscous)),
+                                 bool &linear_propagation):    
     control_duration_(control_duration),
     state_space_(nullptr),
     state_space_bounds_(1),
@@ -39,16 +38,12 @@ OMPLControlTest::OMPLControlTest(const std::string &model_file,
     sinput << "load " << model_file;
     if (!urdf_module->SendCommand(sout,sinput)) {
         cout << "Failed to load URDF model" << endl;
+        return;
     }
+    cout << "Succesfully loaded URDF model" << endl;
     std::vector<OpenRAVE::KinBodyPtr> bodies;
     env_->GetBodies(bodies);
-    cout << "len bodies " << bodies.size() << endl;  
-    //env_->Load(collada_model);
     env_->StopSimulation();
-    
-    /**std::vector<OpenRAVE::RobotBasePtr> robots;
-    env_->GetRobots(robots);
-    OpenRAVE::RobotBasePtr robot = robots[0];*/
     
     OpenRAVE::RobotBasePtr robot = getRobot();
 
@@ -57,7 +52,9 @@ OMPLControlTest::OMPLControlTest(const std::string &model_file,
     cout << "is static " << links[0]->IsStatic() << endl;
     
     /***** Setup OMPL *****/
+    cout << "setting up ompl" << endl;
     setup_ompl_(robot, simulation_step_size, linear_propagation);
+    cout << "ompl set up" << endl;
     
     /***** Create the physics engine *****/
     const std::string engine = "ode";
@@ -66,8 +63,11 @@ OMPLControlTest::OMPLControlTest(const std::string &model_file,
     const OpenRAVE::Vector gravity({0.0, 0.0, 0.0});
     physics_engine_->SetGravity(gravity);
     env_->SetPhysicsEngine(physics_engine_);
-    
-    boost::static_pointer_cast<StatePropagator>(state_propagator_)->setupOpenRAVEEnvironment(env_, robot);
+    cout << "setting up state propagator" << endl;
+    boost::static_pointer_cast<StatePropagator>(state_propagator_)->setupOpenRAVEEnvironment(env_, 
+    		                                                                                 robot,
+    		                                                                                 coulomb,
+    		                                                                                 viscous);
 }
 
 OpenRAVE::EnvironmentBasePtr OMPLControlTest::getEnvironment() {
@@ -91,14 +91,14 @@ bool OMPLControlTest::setup_ompl_(OpenRAVE::RobotBasePtr &robot,
 		                          double &simulation_step_size,
 		                          bool &linear_propagation) {
     // The state space consists of joint angles + velocity    
-    state_space_dimension_ = robot->GetDOF() * 2 - 2;
+    state_space_dimension_ = robot->GetDOF() * 2;
     control_space_dimension_ = state_space_dimension_ / 2;
-    
+    cout << "robot dof " << robot->GetDOF() << endl;
+    cout << "state space dimension " << state_space_dimension_ << endl;
+    cout << "control_space_dimension " << control_space_dimension_ << endl;
     state_space_ = boost::make_shared<ompl::base::RealVectorStateSpace>(state_space_dimension_);    
     state_space_bounds_ = ompl::base::RealVectorBounds(state_space_dimension_);
-    control_space_ = boost::make_shared<ControlSpace>(state_space_, control_space_dimension_);    
-    //ompl::control::ControlSamplerPtr ptr_ = control_space_->allocControlSampler();
-    //ompl::control::ControlSamplerPtr ptr2_ = control_space_->allocDefaultControlSampler();
+    control_space_ = boost::make_shared<ControlSpace>(state_space_, control_space_dimension_);
     
     space_information_ = boost::make_shared<ompl::control::SpaceInformation>(state_space_, control_space_);
     space_information_->setStateValidityChecker(boost::bind(&OMPLControlTest::isValid, this, _1));
@@ -113,8 +113,7 @@ bool OMPLControlTest::setup_ompl_(OpenRAVE::RobotBasePtr &robot,
     
     bool verbose = false;
     state_propagator_ = boost::make_shared<StatePropagator>(space_information_, 
-                                                            simulation_step_size,
-                                                            damper_,
+                                                            simulation_step_size,                                                            
                                                             linear_propagation,
                                                             verbose);    
     space_information_->setStatePropagator(state_propagator_);
@@ -147,10 +146,15 @@ bool OMPLControlTest::setup_ompl_(OpenRAVE::RobotBasePtr &robot,
         control_bounds.setHigh(i, joints[i]->GetMaxTorque());
         //torque_bounds = torque_bounds - 0.1;
     }    
-    
+    cout << "what " << joints.size() << endl;
     state_space_->as<ompl::base::RealVectorStateSpace>()->setBounds(state_space_bounds_);
     control_space_->as<ompl::control::RealVectorControlSpace>()->setBounds(control_bounds);
+    sleep(1);
+    
+    cout << "return true" << endl;
+    
     return true;
+    
 }
 
 bool OMPLControlTest::isValid(const ompl::base::State *state) {	
@@ -345,7 +349,7 @@ int main(int argc, char** argv) {
     double coulomb = 0.0;
     double viscous = 1.0;    
     //double control_duration = 0.07;
-    double control_duration = 0.2;
+    double control_duration = 0.3;
     double simulation_step_size = 0.001;    
     double time_limit = 50.0;
     bool linear_propagation = false;

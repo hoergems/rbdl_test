@@ -24,7 +24,8 @@ class Test:
         print "Calculating inertia matrix"
         M = self.calc_inertia_matrix(Jvs, M_is)        
         if self.simplifying:
-            M = trigsimp(M)            
+            M = trigsimp(M)
+        print M            
         print "Calculating coriolis matrix"
         C = self.calc_coriolis_matrix(self.q, self.qdot, M)
         if self.simplifying:
@@ -208,9 +209,12 @@ class Test:
     def get_dynamic_model(self, M, C, N, thetas, dot_thetas, rs): 
         print "Inverting inertia matrix"              
         t0 = time.time()
-        M_inv = M.inv("LU")
-        if self.simplifying:
-            M_inv = trigsimp(M_inv)
+        #M_inv = M.inv("LU")
+        M_inv = M.inv()
+        print M_inv
+        print "Inverted inertia matrix. Simplifying..."
+        '''if self.simplifying:
+            M_inv = trigsimp(M_inv)'''
         print "time to invert: " + str(time.time() - t0)        
         Thetas = Matrix([[thetas[i]] for i in xrange(len(thetas) - 1)])
         Dotthetas = Matrix([[dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
