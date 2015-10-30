@@ -6,6 +6,7 @@ import os
 import sys
 import argparse
 from sympy.printing import print_ccode
+from sympy.abc import x
 
 from scipy.integrate import ode, odeint
 from gi.overrides.keysyms import R10
@@ -24,8 +25,7 @@ class Test:
         print "Calculating inertia matrix"
         M = self.calc_inertia_matrix(Jvs, M_is)        
         if self.simplifying:
-            M = trigsimp(M)
-        print M            
+            M = trigsimp(M)                  
         print "Calculating coriolis matrix"
         C = self.calc_coriolis_matrix(self.q, self.qdot, M)
         if self.simplifying:
@@ -38,10 +38,12 @@ class Test:
                                          g) 
         if self.simplifying:      
             N = trigsimp(N)
-        print "Get dynamic model"
-        f, M_inv = self.get_dynamic_model(M, C, N, self.q, self.qdot, self.rho)
-        print "Build taylor approximation"        
-        (f, A1, A2, A3, B1, C1) = self.partial_derivatives(f,
+        print "Get dynamic model"        
+        f, M_inv = self.get_dynamic_model(M, C, N, self.q, self.qdot, self.rho)           
+        print "Build taylor approximation" 
+        #(fot, f1, A, B, C) = self.taylor_approximation(f, self.q, self.qdot, self.qstar, self.qdotstar, self.rho, self.rhostar)
+        #self.lin(fot, f1, A, B, C)       
+        (f2, A1, A2, A3, B1, C1) = self.partial_derivatives(f,
                                                            M_inv,
                                                            C,
                                                            N,
@@ -51,17 +53,70 @@ class Test:
                                                            self.qstar, 
                                                            self.qdotstar, 
                                                            self.rhostar)
+        print "Finding steady states..."
+        steady_states = self.get_steady_states(f2)        
         
-        self.gen_cpp_code2(A1, "A1")
-        self.gen_cpp_code2(A2, "A2")
-        self.gen_cpp_code2(A3, "A3")
-        self.gen_cpp_code2(B1, "B1")
-        self.gen_cpp_code2(C1, "C1")
+        (f, A, B) = self.substitude_steady_states(f2, A1, A2, A3, B1, C1, steady_states)
+        print "Generating c++ code..."
+        self.gen_cpp_code2(A, "A")
+        self.gen_cpp_code2(B, "B")        
         self.gen_cpp_code2(f, "f")
         if buildcpp:
+            print "Build c++ code..."
             cmd = "cd build && cmake .. && make -j8"           
             os.system(cmd)
-        print "Done"
+        print "Done"    
+        
+    def get_steady_states(self, f):        
+        for i in xrange(len(self.rho)):
+            f = f.subs(self.rho[i], 0)
+        print "simplifying fs..."
+        for i in xrange(len(f)):
+            f[i, 0] = trigsimp(f[i, 0])
+        equations = []
+        variables = []        
+        for i in xrange(len(f)):
+            equations.append(f[i, 0])
+        for i in xrange(len(self.q) - 1):
+            variables.append(self.q[i])
+        for i in xrange(len(self.q) - 1):
+            variables.append(self.qdot[i])
+        print "solve..."
+        steady_states = solve(equations, variables)        
+        return steady_states[0]
+        
+    def substitude_steady_states(self, f, A1, A2, A3, B1, C1, steady_states):                             
+        for i in xrange(len(self.rho)):            
+            f = f.subs(self.rho[i], 0)
+            A1 = A1.subs(self.rho[i], 0)
+            A2 = A2.subs(self.rho[i], 0)
+            A3 = A3.subs(self.rho[i], 0)
+            B1 = B1.subs(self.rho[i], 0)
+            C1 = C1.subs(self.rho[i], 0)            
+        for i in xrange(len(steady_states.keys())):
+            
+            f = f.subs(steady_states.keys()[i], steady_states[steady_states.keys()[i]])
+            A1 = A1.subs(steady_states.keys()[i], steady_states[steady_states.keys()[i]])
+            A2 = A2.subs(steady_states.keys()[i], steady_states[steady_states.keys()[i]])
+            A3 = A3.subs(steady_states.keys()[i], steady_states[steady_states.keys()[i]])
+            B1 = B1.subs(steady_states.keys()[i], steady_states[steady_states.keys()[i]])
+            C1 = C1.subs(steady_states.keys()[i], steady_states[steady_states.keys()[i]])              
+        A = Matrix([[0, 0],
+                    [0, 0]])
+        A_low = A1 + A2 + A3        
+        A = A.col_join(A_low)
+            
+        B = Matrix([[1, 0],
+                    [0, 1]])
+        B = B.col_join(B1)
+        A = A.row_join(B)
+        
+        B = Matrix([[0, 0],
+                    [0, 0]])
+        B = B.col_join(C1)   
+        
+        return f, A, B
+    
         
     def parse_urdf(self, xml_file):
         robot = Robot(xml_file)
@@ -100,7 +155,8 @@ class Test:
             symb_string_q_star = "thetas_star_[" + str(i) + "]"
             symb_string_q_dot_star = "dot_thetas_star_[" + str(i) + "]"
             symb_string_r = "rho[" + str(i) + "]"
-            symb_string_r_star = "rhos_star_[" + str(i) + "]"
+            symb_string_r_star = "rhos_star_[" + str(i) + "]"           
+            
             
             self.q.append(symbols(symb_string_q))
             self.qdot.append(symbols(symb_string_q_dot))
@@ -211,10 +267,8 @@ class Test:
         t0 = time.time()
         #M_inv = M.inv("LU")
         M_inv = M.inv()
-        print M_inv
-        print "Inverted inertia matrix. Simplifying..."
-        '''if self.simplifying:
-            M_inv = trigsimp(M_inv)'''
+        
+        print "Inverted inertia matrix. Simplifying..."        
         print "time to invert: " + str(time.time() - t0)        
         Thetas = Matrix([[thetas[i]] for i in xrange(len(thetas) - 1)])
         Dotthetas = Matrix([[dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
@@ -242,8 +296,7 @@ class Test:
                             rs, 
                             thetas_star,
                             dot_thetas_star,
-                            rs_star):
-        q = Matrix([[thetas[i]] for i in xrange(len(thetas) - 1)])
+                            rs_star):        
         dot_q = Matrix([[dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
         r = Matrix([[rs[i]] for i in xrange(len(rs) - 1)])
         
@@ -266,9 +319,8 @@ class Test:
         B1 = B1.jacobian([dot_thetas[i] for i in xrange(len(dot_thetas) - 1)])       
         
         C1 = M_inv * r        
-        C1 = C1.jacobian([rs[i] for i in xrange(len(rs) - 1)])
-        
-        for i in xrange(len(thetas) - 1):
+        C1 = C1.jacobian([rs[i] for i in xrange(len(rs) - 1)])        
+        '''for i in xrange(len(thetas) - 1):
             A1 = A1.subs(thetas[i], thetas_star[i])
             A1 = A1.subs(dot_thetas[i], dot_thetas_star[i])
             A1 = A1.subs(rs[i], rs_star[i])
@@ -285,13 +337,13 @@ class Test:
             B1 = B1.subs(dot_thetas[i], dot_thetas_star[i])
             B1 = B1.subs(rs[i], rs_star[i])
            
-            C1 = C1.subs(thetas[i], dot_thetas[i])
+            C1 = C1.subs(thetas[i], thetas_star[i])
             C1 = C1.subs(dot_thetas[i], dot_thetas_star[i])
             C1 = C1.subs(rs[i], rs_star[i])
             
             f = f.subs(thetas[i], thetas_star[i])
             f = f.subs(dot_thetas[i], dot_thetas_star[i])
-            f = f.subs(rs[i], rs_star[i])   
+            f = f.subs(rs[i], rs_star[i])'''
         return (f, A1, A2, A3, B1, C1)
          
         
@@ -333,7 +385,7 @@ class Test:
         #sleep
         "Construct Taylor approximation..."
         fot = f + A * (q - q_star) + B * (dot_q - dot_q_star) + C * (r - r_star)
-        return fot
+        return fot, f, A, B, C
         
     def test_fot(self, f):
         q1, q2, qdot1, qdot2, qdotdot1, qdotdot2 = symbols("q1 q2 qdot1 qdot2 qdotdot1 qdotdot2")

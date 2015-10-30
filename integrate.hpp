@@ -33,18 +33,10 @@ namespace shared {
     	
     private:
     	
-    	MatrixXd getA() const;
-    	MatrixXd getB() const;
-    	MatrixXd getC() const;
+    	MatrixXd getA(const state_type &x) const;
+    	MatrixXd getB(const state_type &x) const;
     	
-    	MatrixXd getA1() const;
-    	MatrixXd getA2() const;
-    	MatrixXd getA3() const;
-    	
-    	MatrixXd getB1() const;
-    	MatrixXd getC1() const;
-    	
-    	VectorXd getf() const;
+    	VectorXd getf(const state_type &x) const;
     	
     	mutable std::vector<double> thetas_star_;
     	

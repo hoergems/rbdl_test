@@ -88,7 +88,7 @@
     <dynamics damping="0.5"/>
   </joint>
 
-  <joint name="joint3" type="fixed">
+  <joint name="joint3" type="revolute">
     <parent link="link2"/>
     <child link="end_effector"/>
     <origin rpy="0 0 0" xyz="1 0 0"/>
