@@ -113,11 +113,13 @@ void Integrate::ode(const state_type &x , state_type &dxdt , double t) const {
 	
 	VectorXd state(x.size());
 	VectorXd control_state(x.size() / 2);
+	
 	for (size_t i = 0; i < x.size() / 2; i++) {
 		state[i] = x[i] - thetas_star_[i];
-		state[i + x.size() / 2] = x[i + x.size()] - dot_thetas_star_[i];
-		control_state[i] = 0.0 - rhos_star_[i];		                                                             
-	}
+		state[i + x.size() / 2] = x[i + x.size() / 2] - dot_thetas_star_[i];
+		//control_state[i] = rho[i] - rhos_star_[i];
+		control_state[i] = rho[i];
+	}	
 	/**for (size_t i = 0; i < x.size() / 2; i++) {
 		q(i) = x[i];
 		q_dot(i) = x[i + x.size() / 2];
@@ -130,9 +132,19 @@ void Integrate::ode(const state_type &x , state_type &dxdt , double t) const {
 	
 	MatrixXd A = getA(x);	
 	MatrixXd B = getB(x);	
-	MatrixXd f = getf(x);
-	res = f + A * state + B * control_state;
-	dxdt.clear();
+    //MatrixXd f = getf(x);
+	cout << "A " << A << endl << endl;
+	cout << "B " << B << endl << endl;	
+	//cout << "f " << f << endl << endl;
+	cout << "state " << state << endl << endl;
+	cout << "control_state " << control_state << endl << endl;
+	cout << "A * state " << A * state << endl << endl;
+	cout << "B * control_state " << B * control_state << endl << endl;
+	
+	res = A * state + B * control_state;
+	cout << "res " << res << endl << endl;
+	//sleep(10);
+ 	dxdt.clear();
 	for (size_t i = 0; i < x.size(); i++) {		
 		dxdt.push_back(res(i));
 	}	

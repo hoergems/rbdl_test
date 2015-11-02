@@ -73,7 +73,7 @@
   <joint name="joint1" type="revolute">
     <parent link="world"/>
     <child link="link1"/>
-    <origin rpy="-1.57079632679489661923 0 0" xyz="0 0 0"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
     <axis xyz="0 0 1"/>
     <limit effort="70" lower="-3.14159265359" upper="3.14159265359" velocity="20"/>
     
