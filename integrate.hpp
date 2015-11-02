@@ -31,8 +31,10 @@ namespace shared {
     	
     	std::vector<double> getResult();
     	
-    private:
-    	
+    private: 
+MatrixXd getB0(const state_type &x) const; 
+MatrixXd getA0(const state_type &x) const; 
+
     	MatrixXd getA(const state_type &x) const;
     	MatrixXd getB(const state_type &x) const;
     	

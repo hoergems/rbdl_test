@@ -54,22 +54,67 @@ class Test:
                                                            self.qdotstar, 
                                                            self.rhostar)
         print "Finding steady states..."
-        steady_states = self.get_steady_states(f2)        
-        
-        (f, A, B) = self.substitude_steady_states(f2, A1, A2, A3, B1, C1, steady_states)
-        print "Generating c++ code..."
-        self.gen_cpp_code2(A, "A")
-        self.gen_cpp_code2(B, "B")        
-        self.gen_cpp_code2(f, "f")
+        steady_states = self.get_steady_states(f2) 
+        for i in xrange(len(steady_states)):       
+            print "Steady states found. Substituting..."
+            (f, A, B) = self.substitude_steady_states(f2, A1, A2, A3, B1, C1, steady_states[i])
+            print "Generating c++ code..."
+            self.gen_cpp_code2(A, "A" + str(i))
+            self.gen_cpp_code2(B, "B" + str(i))        
+            #self.gen_cpp_code2(f, "f" + str(i))
         if buildcpp:
             print "Build c++ code..."
             cmd = "cd build && cmake .. && make -j8"           
             os.system(cmd)
         print "Done"    
         
-    def get_steady_states(self, f):        
+    def get_steady_states(self, f):
+        
         for i in xrange(len(self.rho)):
             f = f.subs(self.rho[i], 0)
+        steady_states = []     
+        if len(self.q) == 3:
+            ss = dict()
+            ss[self.q[0]] = self.q[0] 
+            ss[self.q[1]] = self.q[1]           
+            ss[self.qdot[0]] = 0.0
+            ss[self.qdot[1]] = 0.0
+            print "return 1"
+            steady_states.append(ss)
+            return steady_states
+        else:
+            if self.joint_origins[0][3] != 0.0:
+                ss1 = dict()
+                ss2 = dict()
+                ss1[self.q[0]] = 0.0                
+                ss1[self.q[1]] = -np.pi / 2.0
+                ss1[self.q[2]] = 0.0
+                ss1[self.qdot[0]] = 0.0
+                ss1[self.qdot[1]] = 0.0
+                ss1[self.qdot[2]] = 0.0
+                
+                ss2[self.q[0]] = 0.0                
+                ss2[self.q[1]] = np.pi / 2.0
+                ss2[self.q[2]] = 0.0
+                ss2[self.qdot[0]] = 0.0
+                ss2[self.qdot[1]] = 0.0
+                ss2[self.qdot[2]] = 0.0
+                print "return 2"
+                steady_states.append(ss1)
+                steady_states.append(ss2)
+                return steady_states
+            else: 
+                ss = dict()  
+                ss[self.q[0]] = self.q[0]
+                ss[self.q[1]] = self.q[1]
+                ss[self.q[2]] = self.q[2]             
+                ss[self.qdot[0]] = 0.0
+                ss[self.qdot[1]] = 0.0
+                ss[self.qdot[2]] = 0.0
+                print "return 3"
+                steady_states.append(ss)
+                return steady_states
+        
         print "simplifying fs..."
         for i in xrange(len(f)):
             f[i, 0] = trigsimp(f[i, 0])
@@ -82,7 +127,11 @@ class Test:
         for i in xrange(len(self.q) - 1):
             variables.append(self.qdot[i])
         print "solve..."
-        steady_states = solve(equations, variables)        
+        steady_states = solve(equations, variables)
+        
+        print steady_states
+        
+        sleep        
         return steady_states[0]
         
     def substitude_steady_states(self, f, A1, A2, A3, B1, C1, steady_states):                             
@@ -101,22 +150,23 @@ class Test:
             A3 = A3.subs(steady_states.keys()[i], steady_states[steady_states.keys()[i]])
             B1 = B1.subs(steady_states.keys()[i], steady_states[steady_states.keys()[i]])
             C1 = C1.subs(steady_states.keys()[i], steady_states[steady_states.keys()[i]])              
-        A = Matrix([[0, 0],
-                    [0, 0]])
+        '''A = Matrix([[0, 0],
+                    [0, 0]])'''
+        A = zeros(len(self.q) - 1)
+        print "Claculate A_low..."
         A_low = A1 + A2 + A3        
         A = A.col_join(A_low)
             
-        B = Matrix([[1, 0],
-                    [0, 1]])
+        ''''B = Matrix([[1, 0],
+                    [0, 1]])'''
+        B = eye(len(self.q) - 1)
         B = B.col_join(B1)
         A = A.row_join(B)
         
-        B = Matrix([[0, 0],
-                    [0, 0]])
+        ''''B = Matrix([[0, 0],
+                    [0, 0]])'''
+        B = zeros(len(self.q) - 1)
         B = B.col_join(C1)
-        print A
-        sleep   
-        
         return f, A, B
     
         
@@ -192,8 +242,9 @@ class Test:
                     self.link_inertias[i][4],
                     self.link_inertias[i][8]]for i in xrange(len(self.link_inertias))]              
      
-    def gen_cpp_code2(self, Matr, name):
+    def gen_cpp_code2(self, Matr, name):        
         lines = list(open("integrate.cpp", 'r'))
+        lines_header = list(open("integrate.hpp", 'r'))
         temp_lines = []
         if Matr.shape[1] != 1:
             temp_lines.append("MatrixXd m(" + str(Matr.shape[0]) + ", " + str(Matr.shape[1]) + "); \n")
@@ -214,15 +265,35 @@ class Test:
                 idx2 = i - 1
                 if breaking:
                     break        
-        del lines[idx1:idx2]
-        idx = -1
-        for i in xrange(len(lines)):
-            if "Integrate::get" + name in lines[i]:
-                idx = i        
-        lines[idx+1:idx+1] = temp_lines        
+        if idx1 == -1:            
+            temp_lines.insert(0, "MatrixXd Integrate::get" + name + "(const state_type &x) const{ \n") 
+            temp_lines.append("\n")
+            temp_lines.append("} \n \n")                     
+            lines[len(lines) - 1:len(lines) - 1] = temp_lines            
+            
+            temp_lines_header = []
+            idx = -1
+            for i in xrange(len(lines_header)):
+                if "private:" in lines_header[i]:                    
+                    idx = i
+            temp_lines_header.append("MatrixXd get" + str(name) + "(const state_type &x) const; \n")
+            lines_header[idx+1:idx+1] = temp_lines_header
+                
+        else:       
+            del lines[idx1:idx2]
+            idx = -1
+            for i in xrange(len(lines)):
+                if "Integrate::get" + name in lines[i]:
+                    idx = i        
+            lines[idx+1:idx+1] = temp_lines 
+        print temp_lines       
         os.remove("integrate.cpp")
+        os.remove("integrate.hpp")
         with open("integrate.cpp", 'a+') as f:
             for line in lines:
+                f.write(line)
+        with open("integrate.hpp", 'a+') as f:
+            for line in lines_header:
                 f.write(line)
                             
             
