@@ -328,16 +328,19 @@ void OMPLControlTest::testNormalDist(double &control_duration,
 	std::vector<OpenRAVE::dReal> start_state({0.0, 0.0});
 	std::vector<OpenRAVE::dReal> start_vel({0.0, 0.0});
 	std::vector<std::vector<OpenRAVE::dReal>> res_states;
+	std::vector<std::vector<OpenRAVE::dReal>> res_velocities;
 	std::vector<OpenRAVE::dReal> res_state;
+	std::vector<OpenRAVE::dReal> res_velocity;
 	std::random_device rd;
 	std::mt19937 gen(rd());
 	
-	std::normal_distribution<double> dist(0, 200);	
+	std::normal_distribution<double> dist(0, 2);	
 	
 	for (unsigned int i = 0; i < 1000; i++) {
 		cout << "Sim run " << i << endl;
 		desired_torques.clear();
 		res_state.clear();
+		res_velocity.clear();
 		
 		robot->SetDOFValues(start_state);
 	    robot->SetDOFVelocities(start_vel);
@@ -364,7 +367,9 @@ void OMPLControlTest::testNormalDist(double &control_duration,
 		}
 		
 		robot->GetDOFValues(res_state);
+		robot->GetDOFVelocities(res_velocity);
 		res_states.push_back(res_state);
+		res_velocities.push_back(res_velocity);
 	} 
 	
 	std::ofstream f("./somefile.txt");
@@ -372,6 +377,9 @@ void OMPLControlTest::testNormalDist(double &control_duration,
 	for (size_t i = 0; i < res_states.size(); i++) {
 		for (size_t k = 0; k < res_states[i].size(); k++) {
 			f << res_states[i][k] << " ";
+		}
+		for (size_t k = 0; k < res_states[i].size(); k++) {
+			f << res_velocities[i][k] << " ";
 		}
 		f << "\n";
 	}
@@ -424,7 +432,7 @@ int main(int argc, char** argv) {
     double coulomb = 0.0;
     double viscous = 1.0;    
     //double control_duration = 0.07;
-    double control_duration = 0.1;
+    double control_duration = 0.05;
     double simulation_step_size = 0.001;    
     double time_limit = 50.0;
     bool linear_propagation = false;
