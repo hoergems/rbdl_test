@@ -71,8 +71,8 @@ class Test:
         for i in xrange(len(self.rho)):
             f = f.subs(self.rho[i], 0)
         print "simplifying fs..."
-        for i in xrange(len(f)):
-            f[i, 0] = trigsimp(f[i, 0])
+        '''for i in xrange(len(f)):
+            f[i, 0] = trigsimp(f[i, 0])'''
         equations = []
         variables = []        
         for i in xrange(len(f)):

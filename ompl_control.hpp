@@ -53,10 +53,15 @@ namespace shared {
 
                 OpenRAVE::RobotBasePtr getRobot();
 
-                void testPhysics(double &simulation_step_size);
+                void testPhysics(double &simulation_step_size, double &coulomb, double &viscous);
 
                 void viewControls(PathControlPtr &controls,
                                   double &simulation_step_size);
+                
+                void testNormalDist(double &control_duration,
+                		            double &simulation_step_size,
+                		            double &coulomb,
+                		            double &viscous);
 
         private:
                 boost::shared_ptr<TorqueDamper> damper_;
