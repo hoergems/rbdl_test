@@ -19,7 +19,8 @@ struct VecToList
     }
 };
 
-Integrate::Integrate() {	
+Integrate::Integrate() {
+	setupSteadyStates();
 }
 
 std::vector<double> Integrate::getResult() {
@@ -45,60 +46,64 @@ void Integrate::setup(std::vector<double> &thetas_star,
 	dot_thetas_star_.clear();
 	rhos_star_.clear();
 	rho.clear();
+	state_type state_temp;
 	for (size_t i = 0; i < thetas_star.size(); i++) {
 		thetas_star_.push_back(thetas_star[i]);
 		dot_thetas_star_.push_back(dot_thetas_star[i]);
 		rhos_star_.push_back(rhos_star[i]);
 		rho.push_back(rhos_star[i]);
-	}	
-}
-
-MatrixXd Integrate::getA(const state_type &x) const{
-MatrixXd m(4, 4); 
-m(0, 0) = 0; 
-m(0, 1) = 0; 
-m(0, 2) = 1; 
-m(0, 3) = 0; 
-m(1, 0) = 0; 
-m(1, 1) = 0; 
-m(1, 2) = 0; 
-m(1, 3) = 1; 
-m(2, 0) = 0; 
-m(2, 1) = 0; 
-m(2, 2) = 0; 
-m(2, 3) = 0; 
-m(3, 0) = 0; 
-m(3, 1) = 0; 
-m(3, 2) = 0; 
-m(3, 3) = 0; 
-return m; 
+		
+		state_temp.push_back(thetas_star[i]);
+	}
+	
+	
+	for (size_t i = 0; i < dot_thetas_star.size(); i++) {
+		state_temp.push_back(dot_thetas_star[i]);
+	}
+	
+	const state_type state = state_temp;
+	
+	ab_functions_ = getClosestSteadyStateFunctions(state);
 	
 }
 
-MatrixXd Integrate::getB(const state_type &x) const{
-MatrixXd m(4, 2); 
-m(0, 0) = 0; 
-m(0, 1) = 0; 
-m(1, 0) = 0; 
-m(1, 1) = 0; 
-m(2, 0) = 1.0/(1.0*cos(1.0*x[1]) + 1.28) + pow(-0.5*(-1.0*sin(1.0*x[0]) - 0.5*sin(1.0*x[0] + 1.0*x[1]))*sin(1.0*x[0] + 1.0*x[1]) + 0.5*(1.0*cos(1.0*x[0]) + 0.5*cos(1.0*x[0] + 1.0*x[1]))*cos(1.0*x[0] + 1.0*x[1]) + 0.03, 2)/((1.0*cos(1.0*x[1]) + 1.28)*(-0.125*cos(2.0*x[1]) + 0.155)); 
-m(2, 1) = -(-0.5*(-1.0*sin(1.0*x[0]) - 0.5*sin(1.0*x[0] + 1.0*x[1]))*sin(1.0*x[0] + 1.0*x[1]) + 0.5*(1.0*cos(1.0*x[0]) + 0.5*cos(1.0*x[0] + 1.0*x[1]))*cos(1.0*x[0] + 1.0*x[1]) + 0.03)/(-0.125*cos(2.0*x[1]) + 0.155); 
-m(3, 0) = -(-0.5*(-1.0*sin(1.0*x[0]) - 0.5*sin(1.0*x[0] + 1.0*x[1]))*sin(1.0*x[0] + 1.0*x[1]) + 0.5*(1.0*cos(1.0*x[0]) + 0.5*cos(1.0*x[0] + 1.0*x[1]))*cos(1.0*x[0] + 1.0*x[1]) + 0.03)/(-0.125*cos(2.0*x[1]) + 0.155); 
-m(3, 1) = (1.0*cos(1.0*x[1]) + 1.28)/(-0.125*cos(2.0*x[1]) + 0.155); 
-return m; 
+void Integrate::setupSteadyStates() const {
+std::vector<double> steady_state_0({-1, -1, 0.0, 0.0}); 
+steady_states_.push_back(steady_state_0); 
+a_map_.insert(std::make_pair(0, &Integrate::getA0)); 
+b_map_.insert(std::make_pair(0, &Integrate::getB0)); 
 	
 }
 
-
-VectorXd Integrate::getf(const state_type &x) const{
-VectorXd m(4); 
-m(0, 0) = 0.0; 
-m(1, 0) = 0.0; 
-m(2, 0) = 0; 
-m(3, 0) = 0; 
-return m; 
+std::pair<Integrate::AB_funct, Integrate::AB_funct> Integrate::getClosestSteadyStateFunctions(const state_type &x) const {
+	int min_idx = 0;
+	double dist = 0.0;
+	double min_dist = 10000000.0;
+	double steady_state_val = 0.0;
+	for (size_t i = 0; i < steady_states_.size(); i++) {
+		dist = 0.0;		
+		for (size_t j = 0; j < steady_states_[i].size(); j++) {
+			if (steady_states_[i][j] == -1) {
+				steady_state_val = x[j];
+			}
+			else {			    
+			    steady_state_val = steady_states_[i][j];
+			}
+			
+			dist += std::pow(x[j] - steady_state_val, 2);
+		}
+		
+		dist = std::sqrt(dist);
+		if (dist < min_dist) {
+			min_dist = dist;
+			min_idx = i;
+		}		
+	}
 	
+	return std::make_pair(a_map_.find(min_idx)->second, b_map_.find(min_idx)->second);
 }
+
+
 
 void Integrate::ode(const state_type &x , state_type &dxdt , double t) const {
 	VectorXd res(x.size());
@@ -119,9 +124,9 @@ void Integrate::ode(const state_type &x , state_type &dxdt , double t) const {
 		control_state[i] = rho[i];
 	}
 	
-	MatrixXd A = getA(x);	
-	MatrixXd B = getB(x);
-	res = A * state + B * control_state;
+	auto A = ab_functions_.first;
+	auto B = ab_functions_.second;
+	res = (this->*A)(x) * state + (this->*B)(x) * control_state;
  	dxdt.clear();
 	for (size_t i = 0; i < x.size(); i++) {		
 		dxdt.push_back(res(i));
@@ -140,7 +145,7 @@ BOOST_PYTHON_MODULE(libintegrate) {
                         .def("getResult", &Integrate::getResult)
     ;
 }
- 
+
 MatrixXd Integrate::getA0(const state_type &x) const{ 
 MatrixXd m(4, 4); 
 m(0, 0) = 0; 
@@ -162,17 +167,16 @@ m(3, 3) = 0;
 return m; 
 
 } 
- 
 MatrixXd Integrate::getB0(const state_type &x) const{ 
 MatrixXd m(4, 2); 
 m(0, 0) = 0; 
 m(0, 1) = 0; 
 m(1, 0) = 0; 
 m(1, 1) = 0; 
-m(2, 0) = 1.0/(1.0*cos(1.0*x[1]) + 1.28) + pow(-0.5*(-1.0*sin(1.0*x[0]) - 0.5*sin(1.0*x[0] + 1.0*x[1]))*sin(1.0*x[0] + 1.0*x[1]) + 0.5*(1.0*cos(1.0*x[0]) + 0.5*cos(1.0*x[0] + 1.0*x[1]))*cos(1.0*x[0] + 1.0*x[1]) + 0.03, 2)/((1.0*cos(1.0*x[1]) + 1.28)*(-0.125*cos(2.0*x[1]) + 0.155)); 
-m(2, 1) = -(-0.5*(-1.0*sin(1.0*x[0]) - 0.5*sin(1.0*x[0] + 1.0*x[1]))*sin(1.0*x[0] + 1.0*x[1]) + 0.5*(1.0*cos(1.0*x[0]) + 0.5*cos(1.0*x[0] + 1.0*x[1]))*cos(1.0*x[0] + 1.0*x[1]) + 0.03)/(-0.125*cos(2.0*x[1]) + 0.155); 
-m(3, 0) = -(-0.5*(-1.0*sin(1.0*x[0]) - 0.5*sin(1.0*x[0] + 1.0*x[1]))*sin(1.0*x[0] + 1.0*x[1]) + 0.5*(1.0*cos(1.0*x[0]) + 0.5*cos(1.0*x[0] + 1.0*x[1]))*cos(1.0*x[0] + 1.0*x[1]) + 0.03)/(-0.125*cos(2.0*x[1]) + 0.155); 
-m(3, 1) = (1.0*cos(1.0*x[1]) + 1.28)/(-0.125*cos(2.0*x[1]) + 0.155); 
+m(2, 0) = (pow(-0.5*(-1.0*sin(1.0*x[0]) - 0.5*sin(1.0*x[0] + 1.0*x[1]))*sin(1.0*x[0] + 1.0*x[1]) + 0.5*(1.0*cos(1.0*x[0]) + 0.5*cos(1.0*x[0] + 1.0*x[1]))*cos(1.0*x[0] + 1.0*x[1]) + 0.03, 2)/((pow(-1.0*sin(1.0*x[0]) - 0.5*sin(1.0*x[0] + 1.0*x[1]), 2) + pow(1.0*cos(1.0*x[0]) + 0.5*cos(1.0*x[0] + 1.0*x[1]), 2) + 0.03)*(-pow(-0.5*(-1.0*sin(1.0*x[0]) - 0.5*sin(1.0*x[0] + 1.0*x[1]))*sin(1.0*x[0] + 1.0*x[1]) + 0.5*(1.0*cos(1.0*x[0]) + 0.5*cos(1.0*x[0] + 1.0*x[1]))*cos(1.0*x[0] + 1.0*x[1]) + 0.03, 2)/(pow(-1.0*sin(1.0*x[0]) - 0.5*sin(1.0*x[0] + 1.0*x[1]), 2) + pow(1.0*cos(1.0*x[0]) + 0.5*cos(1.0*x[0] + 1.0*x[1]), 2) + 0.03) + 0.25*pow(sin(1.0*x[0] + 1.0*x[1]), 2) + 0.25*pow(cos(1.0*x[0] + 1.0*x[1]), 2) + 0.03)) + 1)/(pow(-1.0*sin(1.0*x[0]) - 0.5*sin(1.0*x[0] + 1.0*x[1]), 2) + pow(1.0*cos(1.0*x[0]) + 0.5*cos(1.0*x[0] + 1.0*x[1]), 2) + 0.03); 
+m(2, 1) = -(-0.5*(-1.0*sin(1.0*x[0]) - 0.5*sin(1.0*x[0] + 1.0*x[1]))*sin(1.0*x[0] + 1.0*x[1]) + 0.5*(1.0*cos(1.0*x[0]) + 0.5*cos(1.0*x[0] + 1.0*x[1]))*cos(1.0*x[0] + 1.0*x[1]) + 0.03)/((pow(-1.0*sin(1.0*x[0]) - 0.5*sin(1.0*x[0] + 1.0*x[1]), 2) + pow(1.0*cos(1.0*x[0]) + 0.5*cos(1.0*x[0] + 1.0*x[1]), 2) + 0.03)*(-pow(-0.5*(-1.0*sin(1.0*x[0]) - 0.5*sin(1.0*x[0] + 1.0*x[1]))*sin(1.0*x[0] + 1.0*x[1]) + 0.5*(1.0*cos(1.0*x[0]) + 0.5*cos(1.0*x[0] + 1.0*x[1]))*cos(1.0*x[0] + 1.0*x[1]) + 0.03, 2)/(pow(-1.0*sin(1.0*x[0]) - 0.5*sin(1.0*x[0] + 1.0*x[1]), 2) + pow(1.0*cos(1.0*x[0]) + 0.5*cos(1.0*x[0] + 1.0*x[1]), 2) + 0.03) + 0.25*pow(sin(1.0*x[0] + 1.0*x[1]), 2) + 0.25*pow(cos(1.0*x[0] + 1.0*x[1]), 2) + 0.03)); 
+m(3, 0) = -(-0.5*(-1.0*sin(1.0*x[0]) - 0.5*sin(1.0*x[0] + 1.0*x[1]))*sin(1.0*x[0] + 1.0*x[1]) + 0.5*(1.0*cos(1.0*x[0]) + 0.5*cos(1.0*x[0] + 1.0*x[1]))*cos(1.0*x[0] + 1.0*x[1]) + 0.03)/((pow(-1.0*sin(1.0*x[0]) - 0.5*sin(1.0*x[0] + 1.0*x[1]), 2) + pow(1.0*cos(1.0*x[0]) + 0.5*cos(1.0*x[0] + 1.0*x[1]), 2) + 0.03)*(-pow(-0.5*(-1.0*sin(1.0*x[0]) - 0.5*sin(1.0*x[0] + 1.0*x[1]))*sin(1.0*x[0] + 1.0*x[1]) + 0.5*(1.0*cos(1.0*x[0]) + 0.5*cos(1.0*x[0] + 1.0*x[1]))*cos(1.0*x[0] + 1.0*x[1]) + 0.03, 2)/(pow(-1.0*sin(1.0*x[0]) - 0.5*sin(1.0*x[0] + 1.0*x[1]), 2) + pow(1.0*cos(1.0*x[0]) + 0.5*cos(1.0*x[0] + 1.0*x[1]), 2) + 0.03) + 0.25*pow(sin(1.0*x[0] + 1.0*x[1]), 2) + 0.25*pow(cos(1.0*x[0] + 1.0*x[1]), 2) + 0.03)); 
+m(3, 1) = 1.0/(-pow(-0.5*(-1.0*sin(1.0*x[0]) - 0.5*sin(1.0*x[0] + 1.0*x[1]))*sin(1.0*x[0] + 1.0*x[1]) + 0.5*(1.0*cos(1.0*x[0]) + 0.5*cos(1.0*x[0] + 1.0*x[1]))*cos(1.0*x[0] + 1.0*x[1]) + 0.03, 2)/(pow(-1.0*sin(1.0*x[0]) - 0.5*sin(1.0*x[0] + 1.0*x[1]), 2) + pow(1.0*cos(1.0*x[0]) + 0.5*cos(1.0*x[0] + 1.0*x[1]), 2) + 0.03) + 0.25*pow(sin(1.0*x[0] + 1.0*x[1]), 2) + 0.25*pow(cos(1.0*x[0] + 1.0*x[1]), 2) + 0.03); 
 return m; 
 
 } 

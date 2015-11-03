@@ -31,13 +31,16 @@ class Test:
         if self.simplifying:
             C = trigsimp(C)
         print "Calculating normal forces" 
+        viscous = 1.0
         N = self.calc_generalized_forces(self.q,
                                          self.qdot, 
                                          Ocs, 
                                          self.link_masses, 
-                                         g) 
+                                         g,
+                                         viscous) 
         if self.simplifying:      
             N = trigsimp(N)
+        print "N " + str(N)
         print "Get dynamic model"        
         f, M_inv = self.get_dynamic_model(M, C, N, self.q, self.qdot, self.rho)           
         print "Build taylor approximation" 
@@ -54,7 +57,9 @@ class Test:
                                                            self.qdotstar, 
                                                            self.rhostar)
         print "Finding steady states..."
-        steady_states = self.get_steady_states(f2) 
+        steady_states = self.get_steady_states(f2)
+        self.clean_cpp_code()
+        self.gen_cpp_code_steady_states(steady_states)           
         for i in xrange(len(steady_states)):       
             print "Steady states found. Substituting..."
             (f, A, B) = self.substitude_steady_states(f2, A1, A2, A3, B1, C1, steady_states[i])
@@ -68,8 +73,7 @@ class Test:
             os.system(cmd)
         print "Done"    
         
-    def get_steady_states(self, f):
-        
+    def get_steady_states(self, f):        
         for i in xrange(len(self.rho)):
             f = f.subs(self.rho[i], 0)
         steady_states = []     
@@ -240,7 +244,122 @@ class Test:
               
         self.Is = [[self.link_inertias[i][0],
                     self.link_inertias[i][4],
-                    self.link_inertias[i][8]]for i in xrange(len(self.link_inertias))]              
+                    self.link_inertias[i][8]]for i in xrange(len(self.link_inertias))] 
+        
+    def gen_cpp_code_steady_states(self, steady_states):
+        lines = list(open("integrate.cpp", 'r'))
+        temp_lines = []
+        
+        idx1 = -1
+        idx2 = -1
+        breaking = False
+        for i in xrange(len(lines)):
+            if "void Integrate::setupSteadyStates() const {" in lines[i]:
+                 idx1 = i + 1                 
+                 breaking = True
+            elif "std::pair<Integrate::AB_funct, Integrate::AB_funct> Integrate::getClosestSteadyStateFunctions" in lines[i]:
+                idx2 = i - 3                
+                if breaking:
+                    break            
+        print steady_states
+        for i in xrange(len(steady_states)):
+            line = "std::vector<double> steady_state_" + str(i) + "({"
+            for j in xrange(len(self.q) - 1):
+                if steady_states[i][self.q[j]] == 0.0:
+                    line += "0.0, "
+                else:
+                    line += "-1, "
+            for j in xrange(len(self.qdot) - 1):
+                if steady_states[i][self.qdot[j]] == 0.0:
+                    line += "0.0"
+                else:
+                    line += "-1"
+                if not j == len(self.q) - 2:
+                    line += ", "
+            line += "}); \n"
+            line += "steady_states_.push_back(steady_state_" + str(i) +"); \n"
+            line += "a_map_.insert(std::make_pair(" + str(i) + ", &Integrate::getA" + str(i) + ")); \n"
+            line += "b_map_.insert(std::make_pair(" + str(i) + ", &Integrate::getB" + str(i) + ")); \n"
+            temp_lines.append(line)        
+        del lines[idx1:idx2]
+        idx = -1
+        for i in xrange(len(lines)):
+            if "void Integrate::setupSteadyStates() const {" in lines[i]:
+                idx = i        
+        lines[idx+1:idx+1] = temp_lines
+        os.remove("integrate.cpp")        
+        with open("integrate.cpp", 'a+') as f:
+            for line in lines:
+                f.write(line)
+                
+    def clean_cpp_code(self):
+        lines = list(open("integrate.cpp", 'r'))
+        lines_header = list(open("integrate.hpp", 'r'))
+        tmp_lines = []
+        idx_pairs = []
+        
+        idx1 = -1
+        idx2 = -1
+        breaking = False
+        for i in xrange(len(lines)):
+            if "MatrixXd Integrate::getA" in lines[i] or "MatrixXd Integrate::getB" in lines[i]:
+                idx1 = i
+                print "hello"
+                breaking = True
+            if "}" in lines[i] and breaking:
+                idx_pairs.append((idx1, i))
+                idx1 = -1
+                breaking = False               
+        for i in xrange(len(lines)):
+            app = True
+            for j in xrange(len(idx_pairs)):
+                if i >= idx_pairs[j][0] and i <= idx_pairs[j][1]:
+                    app = False
+                    break                
+            if app:
+                tmp_lines.append(lines[i])
+        os.remove("integrate.cpp")        
+        with open("integrate.cpp", 'a+') as f:
+            for line in tmp_lines:
+                f.write(line)
+                
+        tmp_lines = []
+        idxs = []
+        for i in xrange(len(lines_header)):
+            if "MatrixXd getA" in lines_header[i] or "MatrixXd getB" in lines_header[i]:
+                idxs.append(i)
+        for i in xrange(len(lines_header)):
+            app = True
+            for j in xrange(len(idxs)):
+                if i == idxs[j]:
+                    app = False
+            if app:
+                tmp_lines.append(lines_header[i])
+                
+        os.remove("integrate.hpp")        
+        with open("integrate.hpp", 'a+') as f:
+            for line in tmp_lines:
+                f.write(line)
+                
+        lines = list(open("integrate.cpp", 'r'))
+        tmp_lines = []
+        idx1 = -1
+        idx2 = -1
+        breaking = False
+        for i in xrange(len(lines)):
+            if "void Integrate::setupSteadyStates() const {" in lines[i]:
+                idx1 = i + 1
+                breaking = True
+            elif "std::pair<Integrate::AB_funct, Integrate::AB_funct> Integrate::getClosestSteadyStateFunctions" in lines[i]:
+                idx2 = i - 3                
+                if breaking:
+                    break                     
+        del lines[idx1:idx2]        
+        os.remove("integrate.cpp")        
+        with open("integrate.cpp", 'a+') as f:
+            for line in lines:               
+                f.write(line)
+                           
      
     def gen_cpp_code2(self, Matr, name):        
         lines = list(open("integrate.cpp", 'r'))
@@ -258,7 +377,7 @@ class Test:
         idx2 = -1
         breaking = False    
         for i in xrange(len(lines)):
-            if "Integrate::get" + name in lines[i]:                
+            if "Integrate::get" + name + "(const state_type &x) const{" in lines[i]:                
                 idx1 = i + 1               
                 breaking = True
             elif "}" in lines[i]:
@@ -269,7 +388,7 @@ class Test:
             temp_lines.insert(0, "MatrixXd Integrate::get" + name + "(const state_type &x) const{ \n") 
             temp_lines.append("\n")
             temp_lines.append("} \n \n")                     
-            lines[len(lines) - 1:len(lines) - 1] = temp_lines            
+            lines[len(lines) - 2:len(lines) - 1] = temp_lines            
             
             temp_lines_header = []
             idx = -1
@@ -279,14 +398,13 @@ class Test:
             temp_lines_header.append("MatrixXd get" + str(name) + "(const state_type &x) const; \n")
             lines_header[idx+1:idx+1] = temp_lines_header
                 
-        else:       
+        else:                  
             del lines[idx1:idx2]
             idx = -1
             for i in xrange(len(lines)):
                 if "Integrate::get" + name in lines[i]:
                     idx = i        
-            lines[idx+1:idx+1] = temp_lines 
-        print temp_lines       
+            lines[idx:idx] = temp_lines           
         os.remove("integrate.cpp")
         os.remove("integrate.hpp")
         with open("integrate.cpp", 'a+') as f:
@@ -338,8 +456,8 @@ class Test:
     def get_dynamic_model(self, M, C, N, thetas, dot_thetas, rs): 
         print "Inverting inertia matrix"              
         t0 = time.time()
-        #M_inv = M.inv("LU")
-        M_inv = M.inv()
+        M_inv = M.inv("LU")
+        #M_inv = M.inv()
         
         print "Inverted inertia matrix. Simplifying..."        
         print "time to invert: " + str(time.time() - t0)        
@@ -392,31 +510,7 @@ class Test:
         B1 = B1.jacobian([dot_thetas[i] for i in xrange(len(dot_thetas) - 1)])       
         
         C1 = M_inv * r        
-        C1 = C1.jacobian([rs[i] for i in xrange(len(rs) - 1)])        
-        '''for i in xrange(len(thetas) - 1):
-            A1 = A1.subs(thetas[i], thetas_star[i])
-            A1 = A1.subs(dot_thetas[i], dot_thetas_star[i])
-            A1 = A1.subs(rs[i], rs_star[i])
-            
-            A2 = A2.subs(thetas[i], thetas_star[i])
-            A2 = A2.subs(dot_thetas[i], dot_thetas_star[i])
-            A2 = A2.subs(rs[i], rs_star[i])
-            
-            A3 = A3.subs(thetas[i], thetas_star[i])
-            A3 = A3.subs(dot_thetas[i], dot_thetas_star[i])
-            A3 = A3.subs(rs[i], rs_star[i])
-            
-            B1 = B1.subs(thetas[i], thetas_star[i])
-            B1 = B1.subs(dot_thetas[i], dot_thetas_star[i])
-            B1 = B1.subs(rs[i], rs_star[i])
-           
-            C1 = C1.subs(thetas[i], thetas_star[i])
-            C1 = C1.subs(dot_thetas[i], dot_thetas_star[i])
-            C1 = C1.subs(rs[i], rs_star[i])
-            
-            f = f.subs(thetas[i], thetas_star[i])
-            f = f.subs(dot_thetas[i], dot_thetas_star[i])
-            f = f.subs(rs[i], rs_star[i])'''
+        C1 = C1.jacobian([rs[i] for i in xrange(len(rs) - 1)])
         return (f, A1, A2, A3, B1, C1)
          
         
@@ -501,7 +595,8 @@ class Test:
                                 dot_thetas, 
                                 Ocs, 
                                 ms, 
-                                g):
+                                g,
+                                viscous):
         V = 0.0               
         for i in xrange(len(Ocs)): 
             el = ms[i + 1] * g * Ocs[i][2]                                           
@@ -511,8 +606,9 @@ class Test:
         if self.simplifying:    
             N = Matrix([[trigsimp(diff(V, thetas[i]))] for i in xrange(len(thetas) - 1)]) 
         else:
-            N = Matrix([[diff(V, thetas[i])] for i in xrange(len(thetas) - 1)])        
-        return N        
+            N = Matrix([[diff(V, thetas[i])] for i in xrange(len(thetas) - 1)])
+        K = N + Matrix([[viscous * dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
+        return K      
         
     def calc_coriolis_matrix(self, thetas, dot_thetas, M):        
         C = Matrix([[0.0 for m in xrange(len(thetas) - 1)] for n in xrange(len(thetas) - 1)])

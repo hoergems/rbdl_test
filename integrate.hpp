@@ -13,12 +13,14 @@ namespace pl = std::placeholders;
 
 using namespace Eigen;
 
-namespace shared {
+namespace shared {    
 
     typedef std::vector<double> state_type;
 
     class Integrate {
     public:
+    	
+    	
     	Integrate();
     	
     	void do_integration(std::vector<double> &x, std::vector<double> &int_times) const;
@@ -31,14 +33,21 @@ namespace shared {
     	
     	std::vector<double> getResult();
     	
-    private: 
+    private:
 MatrixXd getB0(const state_type &x) const; 
 MatrixXd getA0(const state_type &x) const; 
-
-    	MatrixXd getA(const state_type &x) const;
-    	MatrixXd getB(const state_type &x) const;
     	
-    	VectorXd getf(const state_type &x) const;
+    	// A fuction type of he form MatrixXd function(const state_type&) const
+        typedef MatrixXd ABFuncType(const state_type&) const; 
+        
+        // A member function pointer for the above declared member function type
+    	typedef ABFuncType Integrate::* AB_funct;
+    	
+
+    	
+    	void setupSteadyStates() const;
+    	
+    	std::pair<Integrate::AB_funct, Integrate::AB_funct> getClosestSteadyStateFunctions(const state_type &x) const; 
     	
     	mutable std::vector<double> thetas_star_;
     	
@@ -50,9 +59,17 @@ MatrixXd getA0(const state_type &x) const;
     	
     	mutable std::vector<double> result_;
     	
+    	mutable std::vector<std::vector<double>> steady_states_;
+    	
+    	mutable std::map<int, AB_funct> a_map_;
+    	
+    	mutable std::map<int, AB_funct> b_map_; 
+    	
+    	mutable std::pair<AB_funct, AB_funct> ab_functions_;
     	
     };
 
+    
 }
 
 #endif

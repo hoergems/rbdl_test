@@ -41,7 +41,8 @@ namespace shared {
                                 double &simulation_step_size,
                                 double &coulomb,
                                 double &viscous,
-                                bool &linear_propagation);
+                                bool &linear_propagation,
+                                bool &verbose);
                             
                 ~OMPLControlTest() { OpenRAVE::RaveDestroy(); }
         	
@@ -105,9 +106,12 @@ namespace shared {
                 
                 bool setup_ompl_(OpenRAVE::RobotBasePtr &robot, 
                 		         double &simulation_step_size,
-                		         bool &linear_propagation);
+                		         bool &linear_propagation,
+                		         bool &verbose);
                                    
                 ompl::control::ControlSamplerPtr allocUniformControlSampler_(const ompl::control::ControlSpace *control_space);
+                
+                bool verbose_;
     };
 }
 

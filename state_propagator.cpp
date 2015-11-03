@@ -74,7 +74,7 @@ void StatePropagator::propagate(const ompl::base::State *state,
 			} 
 			cout << endl;
 			cout << "=================================" << endl;
-			sleep(1);
+			//sleep(1);
     	}
     	
     	for (unsigned int i = 0; i < dim; i++) {
@@ -93,20 +93,20 @@ void StatePropagator::propagate(const ompl::base::State *state,
     	}
     	return;
     }
-                                
-    cout << "State: ";
-    for (unsigned int i = 0; i < dim * 2.0; i++) {
-        cout << " " << state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i];
-    }
-    cout << endl;
-
-    cout << "Torques: ";
-    for (unsigned int i = 0; i < dim; i++) {
-        cout << " " << control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[i];
-    }
-    cout << endl;
-
     
+    if (verbose_) {
+		cout << "State: ";
+		for (unsigned int i = 0; i < dim * 2.0; i++) {
+			cout << " " << state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i];
+		}
+		cout << endl;
+	
+		cout << "Torques: ";
+		for (unsigned int i = 0; i < dim; i++) {
+			cout << " " << control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[i];
+		}
+		cout << endl;
+    }    
                                 
     std::vector<OpenRAVE::dReal> current_joint_values;
     std::vector<OpenRAVE::dReal> current_joint_velocities;
@@ -132,12 +132,14 @@ void StatePropagator::propagate(const ompl::base::State *state,
     		                         simulation_step_size_,
     		                         duration,
     		                         propagation_result);
-    cout << "Propagation result: ";
-    for (size_t i = 0; i < propagation_result.size(); i++) {
-    	cout << propagation_result[i] << ", ";
+    if (verbose_) {
+		cout << "Propagation result: ";
+		for (size_t i = 0; i < propagation_result.size(); i++) {
+			cout << propagation_result[i] << ", ";
+		}
+		cout << endl;
+		sleep(1);
     }
-    cout << endl;
-    sleep(2);
     for (unsigned int i = 0; i < dim; i++) {
         result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i] = propagation_result[i];
         result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i + dim] = propagation_result[i + dim];
