@@ -14,12 +14,12 @@ class InteTest:
         
         thetas_star[:] = [0.0, 0.0]
         dot_thetas_star[:] = [0.0, 0.0]
-        rho_star[:] = [2.0, 0.0]
-        current_state[:] = [0.0, 0.0, 1.0, 1.0]
+        rho_star[:] = [1.0, 1.0]
+        current_state[:] = [0.0, 0.0, 0.0, 0.0]
         
         t0 = 0.0
-        te = 0.1
-        delt = 0.001
+        te = 0.0005
+        delt = te
         
         int_times = v_double()
         int_times[:] = [t0, te, delt]

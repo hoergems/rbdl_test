@@ -66,7 +66,8 @@ OMPLControlTest::OMPLControlTest(const std::string &model_file,
     const std::string engine = "ode";
     OpenRAVE::PhysicsEngineBasePtr physics_engine_ = OpenRAVE::RaveCreatePhysicsEngine(env_, engine);
     //const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});
-    const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});
+    //const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});
+    const OpenRAVE::Vector gravity({0.0, 0.0, 0.0});
     physics_engine_->SetGravity(gravity);
     env_->SetPhysicsEngine(physics_engine_);
     cout << "setting up state propagator" << endl;
@@ -396,8 +397,8 @@ void OMPLControlTest::testPhysics(double &simulation_step_size, double &coulomb,
     std::vector<OpenRAVE::dReal> current_vel;
     std::vector<OpenRAVE::dReal> damped_torques;
     //std::vector<OpenRAVE::dReal> desired_torques({15.0, 0.0, 0.0});
-    std::vector<OpenRAVE::dReal> desired_torques({0.0, 0.1});
-    std::vector<OpenRAVE::dReal> input_torques({0.0, 0.0,});
+    std::vector<OpenRAVE::dReal> desired_torques({0.0, 0.0});
+    std::vector<OpenRAVE::dReal> input_torques({0.0, 0.0});
     std::vector<OpenRAVE::dReal> start_state({0.0, 0.0});
     std::vector<OpenRAVE::dReal> start_vel({0.0, 0.0});
 
@@ -411,13 +412,11 @@ void OMPLControlTest::testPhysics(double &simulation_step_size, double &coulomb,
     
     while(true) {
         b++;
-        robot->GetDOFVelocities(current_vel); 
-        cout << "curr vel size " << current_vel.size() << endl;
-        cout << "damped_torques size " << damped_torques.size() << endl;
+        robot->GetDOFVelocities(current_vel);        
         damper->damp_torques(current_vel, damped_torques);
         
         for (size_t k = 0; k < joints.size(); k++) {            
-            input_torques[k] = desired_torques[k] + damped_torques[k];            
+            input_torques[k] = desired_torques[k];// + damped_torques[k];            
             const std::vector<OpenRAVE::dReal> torques({input_torques[k]});
             joints[k]->AddTorque(torques);
         }
@@ -432,11 +431,11 @@ void OMPLControlTest::testPhysics(double &simulation_step_size, double &coulomb,
 int main(int argc, char** argv) {
     double coulomb = 0.0;
     double viscous = 1.0;
-    double control_duration = 0.05;
-    double simulation_step_size = 0.01;    
+    double control_duration = 0.0005;
+    double simulation_step_size = 0.0001;    
     double time_limit = 10.0;
     bool linear_propagation = false;
-    bool verbose = false;
+    bool verbose = true;
     const std::string model_file("test.urdf");
     shared::OMPLControlTest ompl_test(model_file,
                                       control_duration,

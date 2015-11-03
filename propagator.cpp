@@ -54,7 +54,7 @@ void Propagator::propagate_nonlinear(OpenRAVE::EnvironmentBasePtr environment,
 	    damper_->damp_torques(current_vel,
 	                          damped_torques);
 	    for (size_t k = 0; k < joints.size(); k++) {
-	        input_torques[k] = input_torques[k] + damped_torques[k];
+	        input_torques[k] = input_torques[k]; //+ damped_torques[k];
 	        const std::vector<OpenRAVE::dReal> torques({input_torques[k]});
 	        joints[k]->AddTorque(torques);
 	    }        

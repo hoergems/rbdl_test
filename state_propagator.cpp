@@ -103,7 +103,8 @@ void StatePropagator::propagate(const ompl::base::State *state,
 	
 		cout << "Torques: ";
 		for (unsigned int i = 0; i < dim; i++) {
-			cout << " " << control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[i];
+			//cout << " " << control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[i];
+			cout << " " << 1.0;
 		}
 		cout << endl;
     }    
@@ -115,7 +116,8 @@ void StatePropagator::propagate(const ompl::base::State *state,
     for (unsigned int i = 0; i < dim; i++) {
     	current_joint_values.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
     	current_joint_velocities.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i + dim]);
-    	input_torque.push_back(control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[i]);
+    	//input_torque.push_back(control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[i]);
+    	input_torque.push_back(1.0);
     }
     
     current_joint_values.push_back(0.0);
