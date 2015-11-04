@@ -4,6 +4,8 @@
 #include <boost/timer.hpp>
 #include <boost/thread.hpp>
 #include <boost/make_shared.hpp>
+#include <boost/python.hpp>
+#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #include "state_propagator.hpp"
 #include "goal.hpp"
 #include "viewer.hpp"
@@ -34,21 +36,21 @@ namespace shared {
 
     typedef boost::shared_ptr<ompl::control::PathControl> PathControlPtr;
 
-    class OMPLControlTest {
+    class OMPLControl {
         public:
-        	OMPLControlTest(const std::string &model_file,
-                                double &control_duration,
-                                double &simulation_step_size,
-                                double &coulomb,
-                                double &viscous,
-                                bool &linear_propagation,
-                                bool &verbose);
+        		OMPLControl(std::string model_file,
+        					double control_duration,
+							double simulation_step_size,
+							double coulomb,
+							double viscous,
+							bool linear_propagation,
+							bool verbose);
                             
-                ~OMPLControlTest() { OpenRAVE::RaveDestroy(); }
+            	~OMPLControl() { OpenRAVE::RaveDestroy(); }
         	
-        	bool isValid(const ompl::base::State *state);
+            	bool isValid(const ompl::base::State *state);
         	
-        	PathControlPtr test(double &time_limit);
+            	PathControlPtr test(double &time_limit);
 
                 OpenRAVE::EnvironmentBasePtr getEnvironment();
 

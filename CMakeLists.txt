@@ -12,8 +12,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-g -std=c++11")
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${ompl_test_SOURCE_DIR})
 SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${ompl_test_SOURCE_DIR})
 
-include_directories(/usr/local/include/rbdl
-                    /usr/include/eigen3 
+include_directories(/usr/include/eigen3 
                     /usr/inclue/boost 
                     /usr/include/python2.7
                     /usr/local/include/openrave-0.9)
@@ -26,20 +25,20 @@ add_library(robot SHARED robot.cpp)
 
 add_library(integrate SHARED integrate.cpp)
 
-add_executable(ompl_test 
-               ompl_control.cpp 
-               state_propagator.cpp
-               propagator.cpp
-               integrate.cpp 
-               goal.cpp 
-               viewer.cpp 
-               torque_damper.cpp 
-               control_space.cpp 
-               control_sampler.cpp)
-set_property(TARGET ompl_test PROPERTY CXX_STANDARD 11)
-target_link_libraries (ompl_test 
-                       rbdl
-                       rbdl_urdfreader 
+add_library(dynamic_planner SHARED ompl_control.cpp)
+
+#add_executable(ompl_test 
+#               ompl_control.cpp 
+#               state_propagator.cpp
+#               propagator.cpp
+#               integrate.cpp 
+#               goal.cpp 
+#               viewer.cpp 
+#               torque_damper.cpp 
+#               control_space.cpp 
+#               control_sampler.cpp)
+#set_property(TARGET ompl_test PROPERTY CXX_STANDARD 11)
+target_link_libraries (dynamic_planner                        
                        openrave0.9 
                        openrave0.9-core 
                        ompl

@@ -9,13 +9,13 @@ using std::endl;
 
 namespace shared {
 
-OMPLControlTest::OMPLControlTest(const std::string &model_file,
-                                 double &control_duration,
-                                 double &simulation_step_size,
-                                 double &coulomb,
-                                 double &viscous,
-                                 bool &linear_propagation,
-                                 bool &verbose):    
+OMPLControl::OMPLControl(std::string model_file,
+                         double control_duration,
+                         double simulation_step_size,
+                         double coulomb,
+                         double viscous,
+                         bool linear_propagation,
+                         bool verbose):    
     control_duration_(control_duration),
     state_space_(nullptr),
     state_space_bounds_(1),
@@ -54,8 +54,7 @@ OMPLControlTest::OMPLControlTest(const std::string &model_file,
     OpenRAVE::RobotBasePtr robot = getRobot();
 
     const std::vector<OpenRAVE::KinBody::LinkPtr> links(robot->GetLinks());    
-    links[0]->SetStatic(true);
-    cout << "is static " << links[0]->IsStatic() << endl;
+    links[0]->SetStatic(true);    
     
     /***** Setup OMPL *****/
     cout << "setting up ompl" << endl;
@@ -66,8 +65,7 @@ OMPLControlTest::OMPLControlTest(const std::string &model_file,
     const std::string engine = "ode";
     OpenRAVE::PhysicsEngineBasePtr physics_engine_ = OpenRAVE::RaveCreatePhysicsEngine(env_, engine);
     
-    const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});
-    //const OpenRAVE::Vector gravity({0.0, 0.0, 0.0});
+    const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});    
     physics_engine_->SetGravity(gravity);
     env_->SetPhysicsEngine(physics_engine_);
     cout << "setting up state propagator" << endl;
@@ -77,26 +75,26 @@ OMPLControlTest::OMPLControlTest(const std::string &model_file,
     		                                                                                 viscous);
 }
 
-OpenRAVE::EnvironmentBasePtr OMPLControlTest::getEnvironment() {
+OpenRAVE::EnvironmentBasePtr OMPLControl::getEnvironment() {
     return env_;
 }
 
-OpenRAVE::RobotBasePtr OMPLControlTest::getRobot() {
+OpenRAVE::RobotBasePtr OMPLControl::getRobot() {
     std::vector<OpenRAVE::KinBodyPtr> bodies;
     env_->GetBodies(bodies);
     OpenRAVE::RobotBasePtr robot = boost::static_pointer_cast<OpenRAVE::RobotBase>(bodies[0]);
     return robot;
 }
 
-ompl::control::ControlSamplerPtr OMPLControlTest::allocUniformControlSampler_(const ompl::control::ControlSpace *control_space) {	
+ompl::control::ControlSamplerPtr OMPLControl::allocUniformControlSampler_(const ompl::control::ControlSpace *control_space) {	
 	return nullptr;
     return ompl::control::ControlSamplerPtr(new UniformControlSampler(control_space));
 }
 
-bool OMPLControlTest::setup_ompl_(OpenRAVE::RobotBasePtr &robot, 
-		                          double &simulation_step_size,
-		                          bool &linear_propagation,
-		                          bool &verbose) {
+bool OMPLControl::setup_ompl_(OpenRAVE::RobotBasePtr &robot, 
+		                      double &simulation_step_size,
+		                      bool &linear_propagation,
+		                      bool &verbose) {
     // The state space consists of joint angles + velocity    
     state_space_dimension_ = robot->GetDOF() * 2;
     control_space_dimension_ = state_space_dimension_ / 2;
@@ -108,7 +106,7 @@ bool OMPLControlTest::setup_ompl_(OpenRAVE::RobotBasePtr &robot,
     control_space_ = boost::make_shared<ControlSpace>(state_space_, control_space_dimension_);
     
     space_information_ = boost::make_shared<ompl::control::SpaceInformation>(state_space_, control_space_);
-    space_information_->setStateValidityChecker(boost::bind(&OMPLControlTest::isValid, this, _1));
+    space_information_->setStateValidityChecker(boost::bind(&OMPLControl::isValid, this, _1));
     space_information_->setMinMaxControlDuration(1, 1);
     space_information_->setPropagationStepSize(control_duration_);
      
@@ -126,41 +124,32 @@ bool OMPLControlTest::setup_ompl_(OpenRAVE::RobotBasePtr &robot,
     
     // Set the bounds
     const std::vector<OpenRAVE::KinBody::JointPtr> joints(robot->GetJoints());
-    ompl::base::RealVectorBounds control_bounds(control_space_dimension_);
-    //double torque_bounds = 20.0;
+    ompl::base::RealVectorBounds control_bounds(control_space_dimension_);    
         
     for (size_t i = 0; i < joints.size(); i++) {
         std::vector<OpenRAVE::dReal> lower_limit;
         std::vector<OpenRAVE::dReal> upper_limit;        
         joints[i]->GetLimits(lower_limit, upper_limit);        
         
-        // Set the joints position bounds
-        cout << "pos low " << lower_limit[0] << endl;
-        cout << "pos high " << upper_limit[0] << endl;
+        // Set the joints position bounds        
         state_space_bounds_.setLow(i, lower_limit[0]);
         state_space_bounds_.setHigh(i, upper_limit[0]);
 
-        // Set the joints velocity bounds 
-        cout << "vel low " << -joints[i]->GetMaxVel() << endl;
-        cout << "vel high " << joints[i]->GetMaxVel() << endl;       
+        // Set the joints velocity bounds              
         state_space_bounds_.setLow(i + state_space_dimension_ / 2, -joints[i]->GetMaxVel());
         state_space_bounds_.setHigh(i + state_space_dimension_ / 2, joints[i]->GetMaxVel());
-
-        cout << "torque low " << -joints[i]->GetMaxTorque() << endl;
-        cout << "torque high " << joints[i]->GetMaxTorque() << endl;
+        
         control_bounds.setLow(i, -joints[i]->GetMaxTorque());
         control_bounds.setHigh(i, joints[i]->GetMaxTorque());
         //torque_bounds = torque_bounds - 0.1;
     }    
-    cout << "what " << joints.size() << endl;
+    
     state_space_->as<ompl::base::RealVectorStateSpace>()->setBounds(state_space_bounds_);
-    control_space_->as<ompl::control::RealVectorControlSpace>()->setBounds(control_bounds);
-    
+    control_space_->as<ompl::control::RealVectorControlSpace>()->setBounds(control_bounds);    
     return true;
-    
 }
 
-bool OMPLControlTest::isValid(const ompl::base::State *state) {	
+bool OMPLControl::isValid(const ompl::base::State *state) {	
     bool valid = state_space_->as<ompl::base::RealVectorStateSpace>()->satisfiesBounds(state);
     if (valid) {
     	accepted_ = accepted_ + 1.0;
@@ -178,7 +167,7 @@ bool OMPLControlTest::isValid(const ompl::base::State *state) {
     return valid;
 }
 
-bool OMPLControlTest::solve_(double &time_limit) {
+bool OMPLControl::solve_(double &time_limit) {
     bool solved = false;
     bool hasExactSolution = false;    
     while (!solved && !hasExactSolution) {
@@ -197,7 +186,7 @@ bool OMPLControlTest::solve_(double &time_limit) {
     return true;
 }
 
-PathControlPtr OMPLControlTest::test(double &time_limit) {
+PathControlPtr OMPLControl::test(double &time_limit) {
     // Set the start and goal state
     ompl::base::ScopedState<> start_state(state_space_);
     ompl::base::ScopedState<> goal_state(state_space_);
@@ -261,7 +250,7 @@ PathControlPtr OMPLControlTest::test(double &time_limit) {
     }
 }
 
-void OMPLControlTest::viewControls(PathControlPtr &controls,
+void OMPLControl::viewControls(PathControlPtr &controls,
                                    double &simulation_step_size) {
     shared::ViewerTest viewer;
     viewer.testView(env_);
@@ -311,7 +300,7 @@ void OMPLControlTest::viewControls(PathControlPtr &controls,
     }
 }
 
-void OMPLControlTest::testNormalDist(double &control_duration,
+void OMPLControl::testNormalDist(double &control_duration,
 		                             double &simulation_step_size,
 		                             double &coulomb,
 		                             double &viscous) {
@@ -387,7 +376,7 @@ void OMPLControlTest::testNormalDist(double &control_duration,
 	}
 }
 
-void OMPLControlTest::testPhysics(double &simulation_step_size, double &coulomb, double &viscous) {
+void OMPLControl::testPhysics(double &simulation_step_size, double &coulomb, double &viscous) {
     shared::ViewerTest viewer;
     viewer.testView(env_);
     cout << "Testing physics" << endl;    
@@ -425,10 +414,30 @@ void OMPLControlTest::testPhysics(double &simulation_step_size, double &coulomb,
         usleep(1000000 * simulation_step_size);        
     }
 }
+
+BOOST_PYTHON_MODULE(libdynamic_planner) {
+    using namespace boost::python;
+    
+    class_<std::vector<double> > ("v_double")
+             .def(vector_indexing_suite<std::vector<double> >());
+    
+    class_<OMPLControl>("OMPLControl", init<std::string,
+    		                                double,
+										    double,
+										    double,
+										    double,
+										    bool,
+										    bool>())
+                        //.def("doIntegration", &Integrate::do_integration)                        
+                        //.def("getResult", &Integrate::getResult)
+    ;
+}
  
 }
 
-int main(int argc, char** argv) {
+
+
+/**int main(int argc, char** argv) {
     double coulomb = 0.0;
     double viscous = 1.0;
     double control_duration = 0.005;
@@ -437,7 +446,7 @@ int main(int argc, char** argv) {
     bool linear_propagation = false;
     bool verbose = true;
     const std::string model_file("test.urdf");
-    shared::OMPLControlTest ompl_test(model_file,
+    shared::OMPLControl ompl_test(model_file,
                                       control_duration,
                                       simulation_step_size,
                                       coulomb,
@@ -453,6 +462,6 @@ int main(int argc, char** argv) {
                            //simulation_step_size);
     //OpenRAVE::RaveDestroy();
     return 0;
-}
+}*/
 
 
