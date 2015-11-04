@@ -16,7 +16,12 @@ class Test:
         self.simplifying = simplifying
         self.parse_urdf(model)
         #g = 9.81
-        g = 0.0        
+        ''''g = Matrix([[0], 
+                    [0],
+                    [9.81]])'''
+        g = Matrix([[0],
+                    [0],
+                    [9.81]])       
         """
         Get the Jacobians of the links expressed in the robot's base frame
         """
@@ -43,74 +48,100 @@ class Test:
                                          Ocs, 
                                          self.link_masses, 
                                          g,
-                                         viscous) 
+                                         viscous)        
         if self.simplifying:      
             N = trigsimp(N)        
         print "Get dynamic model"        
         f, M_inv = self.get_dynamic_model(M, C, N, self.q, self.qdot, self.rho)           
-        print "Build taylor approximation"               
-        (f2, A1, A2, A3, B1, C1) = self.partial_derivatives(f,
-                                                           M_inv,
-                                                           C,
-                                                           N,
-                                                           self.q,
-                                                           self.qdot,
-                                                           self.rho,
-                                                           self.qstar, 
-                                                           self.qdotstar, 
-                                                           self.rhostar)
-        print "Finding steady states..."
-        steady_states = self.get_steady_states(f2)
+        print "Build taylor approximation" 
+        steady_states = self.get_steady_states(f)
+        print "Get partial derivatives"
+        A, B = self.partial_derivatives2(f)
+        
+        print "Clean cpp code"
         self.clean_cpp_code()
-        self.gen_cpp_code_steady_states(steady_states)           
-        for i in xrange(len(steady_states)):       
-            print "Steady states found. Substituting..."
-            (f, A, B) = self.substitude_steady_states(f2, A1, A2, A3, B1, C1, steady_states[i])
-            print "Generating c++ code..."
+        print "Gen cpp code"
+        self.gen_cpp_code_steady_states(steady_states)    
+        for i in xrange(len(steady_states)):
+            A, B = self.substitude_steady_states2(A, B, steady_states[i]) 
             self.gen_cpp_code2(A, "A" + str(i))
-            self.gen_cpp_code2(B, "B" + str(i))        
-            #self.gen_cpp_code2(f, "f" + str(i))
+            self.gen_cpp_code2(B, "B" + str(i))
+            
         if buildcpp:
             print "Build c++ code..."
             cmd = "cd build && cmake .. && make -j8"           
             os.system(cmd)
-        print "Done"    
+        print "Done"
         
     def get_steady_states(self, f):        
         for i in xrange(len(self.rho)):
             f = f.subs(self.rho[i], 0)
-        steady_states = []     
+        steady_states = []             
         if len(self.q) == 3:
-            ss = dict()
-            ss[self.q[0]] = self.q[0] 
-            ss[self.q[1]] = self.q[1]           
-            ss[self.qdot[0]] = 0.0
-            ss[self.qdot[1]] = 0.0
-            print "return 1"
-            steady_states.append(ss)
-            return steady_states
+            if self.joint_origins[0][3] != 0.0:
+                ss1 = dict()
+                ss2 = dict()
+                ss1[self.q[0]] = -np.pi / 2.0
+                ss1[self.q[1]] = 0.0
+                ss1[self.qdot[0]] = 0.0
+                ss1[self.qdot[1]] = 0.0                
+                    
+                ss2[self.q[0]] = np.pi / 2.0                
+                ss2[self.q[1]] = 0.0              
+                ss2[self.qdot[0]] = 0.0
+                ss2[self.qdot[1]] = 0.0                
+                steady_states.append(ss1)
+                steady_states.append(ss2)                
+                print "return 0"
+                return steady_states
+                
+            if self.joint_origins[1][3] != 0.0:                
+                ss1 = dict()
+                ss2 = dict()
+                ss1[self.q[0]] = self.q[0]
+                ss1[self.q[1]] = -np.pi / 2.0                
+                ss1[self.qdot[0]] = 0.0
+                ss1[self.qdot[1]] = 0.0                
+                    
+                ss2[self.q[0]] = self.q[0]               
+                ss2[self.q[1]] = np.pi / 2.0                
+                ss2[self.qdot[0]] = 0.0
+                ss2[self.qdot[1]] = 0.0                
+                steady_states.append(ss1)
+                steady_states.append(ss2)                
+                print "return 1"
+                return steady_states
+            else:
+                ss = dict()
+                ss[self.q[0]] = self.q[0] 
+                ss[self.q[1]] = self.q[1]           
+                ss[self.qdot[0]] = 0.0
+                ss[self.qdot[1]] = 0.0
+                print "return 2"
+                steady_states.append(ss)                
+                return steady_states
         else:
             if self.joint_origins[0][3] != 0.0:
                 ss1 = dict()
                 ss2 = dict()
-                ss1[self.q[0]] = 0.0                
+                ss1[self.q[0]] = self.q[0]               
                 ss1[self.q[1]] = -np.pi / 2.0
                 ss1[self.q[2]] = 0.0
                 ss1[self.qdot[0]] = 0.0
                 ss1[self.qdot[1]] = 0.0
                 ss1[self.qdot[2]] = 0.0
                 
-                ss2[self.q[0]] = 0.0                
+                ss2[self.q[0]] = self.q[0]                
                 ss2[self.q[1]] = np.pi / 2.0
                 ss2[self.q[2]] = 0.0
                 ss2[self.qdot[0]] = 0.0
                 ss2[self.qdot[1]] = 0.0
                 ss2[self.qdot[2]] = 0.0
-                print "return 2"
+                print "return 3"
                 steady_states.append(ss1)
                 steady_states.append(ss2)
                 return steady_states
-            else: 
+            else:
                 ss = dict()  
                 ss[self.q[0]] = self.q[0]
                 ss[self.q[1]] = self.q[1]
@@ -124,6 +155,8 @@ class Test:
         
         print "simplifying fs..."
         for i in xrange(len(f)):
+            print i
+            print f[i, 0]
             f[i, 0] = trigsimp(f[i, 0])
         equations = []
         variables = []        
@@ -141,40 +174,7 @@ class Test:
         sleep        
         return steady_states[0]
         
-    def substitude_steady_states(self, f, A1, A2, A3, B1, C1, steady_states):                             
-        for i in xrange(len(self.rho)):            
-            f = f.subs(self.rho[i], 0)
-            A1 = A1.subs(self.rho[i], 0)
-            A2 = A2.subs(self.rho[i], 0)
-            A3 = A3.subs(self.rho[i], 0)
-            B1 = B1.subs(self.rho[i], 0)
-            C1 = C1.subs(self.rho[i], 0)            
-        for i in xrange(len(steady_states.keys())):
-            
-            f = f.subs(steady_states.keys()[i], steady_states[steady_states.keys()[i]])
-            A1 = A1.subs(steady_states.keys()[i], steady_states[steady_states.keys()[i]])
-            A2 = A2.subs(steady_states.keys()[i], steady_states[steady_states.keys()[i]])
-            A3 = A3.subs(steady_states.keys()[i], steady_states[steady_states.keys()[i]])
-            B1 = B1.subs(steady_states.keys()[i], steady_states[steady_states.keys()[i]])
-            C1 = C1.subs(steady_states.keys()[i], steady_states[steady_states.keys()[i]])              
-        '''A = Matrix([[0, 0],
-                    [0, 0]])'''
-        A = zeros(len(self.q) - 1)
-        print "Claculate A_low..."
-        A_low = A1 + A2 + A3        
-        A = A.col_join(A_low)
-            
-        ''''B = Matrix([[1, 0],
-                    [0, 1]])'''
-        B = eye(len(self.q) - 1)
-        B = B.col_join(B1)
-        A = A.row_join(B)
-        
-        ''''B = Matrix([[0, 0],
-                    [0, 0]])'''
-        B = zeros(len(self.q) - 1)
-        B = B.col_join(C1)
-        return f, A, B
+    
     
         
     def parse_urdf(self, xml_file):
@@ -194,7 +194,8 @@ class Test:
         
         joint_origins = v2_double()
         robot.getJointOrigin(joint_names, joint_origins)
-        self.joint_origins = [Matrix([[joint_origins[i][j]] for j in xrange(len(joint_origins[i]))]) for i in xrange(len(joint_origins))]
+        self.joint_origins = [Matrix([[joint_origins[i][j]] for j in xrange(len(joint_origins[i]))]) 
+                              for i in xrange(len(joint_origins))]               
         
         joint_axis = v2_double()
         robot.getJointAxis(joint_names, joint_axis)
@@ -255,13 +256,12 @@ class Test:
             elif "std::pair<Integrate::AB_funct, Integrate::AB_funct> Integrate::getClosestSteadyStateFunctions" in lines[i]:
                 idx2 = i - 3                
                 if breaking:
-                    break            
-        print steady_states
+                    break
         for i in xrange(len(steady_states)):
             line = "std::vector<double> steady_state_" + str(i) + "({"
-            for j in xrange(len(self.q) - 1):
-                if steady_states[i][self.q[j]] == 0.0:
-                    line += "0.0, "
+            for j in xrange(len(self.q) - 1):                
+                if steady_states[i][self.q[j]] != self.q[j]:
+                    line += str(steady_states[i][self.q[j]]) + ", "
                 else:
                     line += "-1, "
             for j in xrange(len(self.qdot) - 1):
@@ -469,118 +469,40 @@ class Test:
         h = m_upper.col_join(m_lower)        
         return h, M_inv
     
-    def partial_derivatives(self,
-                            f, 
-                            M_inv, 
-                            C, 
-                            N, 
-                            thetas, 
-                            dot_thetas, 
-                            rs, 
-                            thetas_star,
-                            dot_thetas_star,
-                            rs_star):        
-        dot_q = Matrix([[dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
-        r = Matrix([[rs[i]] for i in xrange(len(rs) - 1)])
+    def substitude_steady_states2(self, A, B, steady_states):
+        print steady_states                             
+        for i in xrange(len(self.rho)):
+            A = A.subs(self.rho[i], 0)
+            B = B.subs(self.rho[i], 0)                       
+        for i in xrange(len(steady_states.keys())):
+            A = A.subs(steady_states.keys()[i], steady_states[steady_states.keys()[i]])            
+            B = B.subs(steady_states.keys()[i], steady_states[steady_states.keys()[i]])
+        return A, B             
         
-        q_star = Matrix([[thetas_star[i]] for i in xrange(len(thetas_star) - 1)])
-        dot_q_star = Matrix([[dot_thetas_star[i]] for i in xrange(len(dot_thetas_star) - 1)])
-        r_star = Matrix([[rs_star[i]] for i in xrange(len(rs_star) - 1)])
+        A = zeros(len(self.q) - 1)
+        print "Claculate A_low..."
+        A_low = A1 + A2 + A3        
+        A = A.col_join(A_low)            
         
-        A1 = M_inv * r
-        A2 = -M_inv * C * dot_q
-        A3 = -M_inv * N 
-        if self.simplifying:
-            A1 = trigsimp(A1)
-            A2 = trigsimp(A2)
-            A3 = trigsimp(A3)                   
-        A1 = A1.jacobian([thetas[i] for i in xrange(len(thetas) - 1)])
-        A2 = A2.jacobian([thetas[i] for i in xrange(len(thetas) - 1)])
-        A3 = A3.jacobian([thetas[i] for i in xrange(len(thetas) - 1)])
+        B = eye(len(self.q) - 1)
+        B = B.col_join(B1)
+        A = A.row_join(B)        
         
-        B1 = -M_inv * C * dot_q
-        B1 = B1.jacobian([dot_thetas[i] for i in xrange(len(dot_thetas) - 1)])       
+        B = zeros(len(self.q) - 1)
+        B = B.col_join(C1)
+        return f, A, B
+    
+    def partial_derivatives2(self,
+                             f):
         
-        C1 = M_inv * r        
-        C1 = C1.jacobian([rs[i] for i in xrange(len(rs) - 1)])
-        return (f, A1, A2, A3, B1, C1)
-         
+        dot_q = Matrix([[self.q[i]] for i in xrange(len(self.q) - 1)])
+        r = Matrix([[self.rho[i]] for i in xrange(len(self.rho) - 1)]) 
         
-    def taylor_approximation(self, f, thetas, dot_thetas, thetas_star, dot_thetas_star, rs, rs_star):        
-        print "Calculate partial derivatives..."
-        A = f.jacobian([thetas[i] for i in xrange(len(thetas) - 1)])        
-        B = f.jacobian([dot_thetas[i] for i in xrange(len(dot_thetas) - 1)])
-        C = f.jacobian([rs[i] for i in xrange(len(rs) - 1)])
-        for i in xrange(len(thetas) - 1):
-            A = A.subs(thetas[i], thetas_star[i])
-            A = A.subs(dot_thetas[i], dot_thetas_star[i])
-            A = A.subs(rs[i], rs_star[i])
-            
-            B = B.subs(thetas[i], thetas_star[i])
-            B = B.subs(dot_thetas[i], dot_thetas_star[i])
-            B = B.subs(rs[i], rs_star[i])
-            
-            C = C.subs(thetas[i], dot_thetas[i])
-            C = C.subs(dot_thetas[i], dot_thetas_star[i])
-            C = C.subs(rs[i], rs_star[i])
-            
-            f = f.subs(thetas[i], thetas_star[i])
-            f = f.subs(dot_thetas[i], dot_thetas_star[i])
-            f = f.subs(rs[i], rs_star[i])
-            
-        if self.simplifying:
-            print "Simplifying Jacobians..."         
-            A = trigsimp(A)
-            B = trigsimp(B)
-            C = trigsimp(C)
-        q = Matrix([[thetas[i]] for i in xrange(len(thetas) - 1)])        
-        dot_q = Matrix([[dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
-        r = Matrix([[rs[i]] for i in xrange(len(rs) - 1)])
-        
-        q_star = Matrix([[thetas_star[i]] for i in xrange(len(thetas_star) - 1)])
-        dot_q_star = Matrix([[dot_thetas_star[i]] for i in xrange(len(dot_thetas_star) - 1)])
-        r_star = Matrix([[rs_star[i]] for i in xrange(len(rs_star) - 1)])        
-        
-        #sleep
-        "Construct Taylor approximation..."
-        fot = f + A * (q - q_star) + B * (dot_q - dot_q_star) + C * (r - r_star)
-        return fot, f, A, B, C
-        
-    def test_fot(self, f):
-        q1, q2, qdot1, qdot2, qdotdot1, qdotdot2 = symbols("q1 q2 qdot1 qdot2 qdotdot1 qdotdot2")
-        r1, r2 = symbols("r1 r2")       
-        x1_1, x1_2, x2_1, x2_2, x3_1, x3_2 = symbols("x1_1 x1_2 x2_1 x2_2 x3_1 x3_2")
-        
-        self.q = [q1, q2]
-        self.qdot = [qdot1, qdot2]
-        self.r = [r1, r2]
-        
-        self.q_star = [x1_1, x1_2]
-        self.qdot_star = [x2_1, x2_2]
-        self.r_star = [x3_1, x3_2]
-        self.initial = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] 
-        self.fot = self.taylor_approximation(f, 
-                                             q, 
-                                             qdot, 
-                                             q_star, 
-                                             qdot_star, 
-                                             r, 
-                                             r_star)        
-        q_star.extend(qdot_star)
-        q_star.extend(r_star)
-        print trigsimp(fot)
-        for i in xrange(len(q_star)):
-            fot = fot.subs(q_star[i], self.initial[0])
-        
-        
-        #print fot.subs([(q, 0.0), (q_dot, 0.0), (r, 1.0)])
-        t = np.linspace(0.0, 0.3, 2)
-        
-        t0 = time.time()
-        eq = odeint(self.f, np.array(self.initial[:4]), t)
-        print "calc took " + str(time.time() - t0) + " seconds"
-        print "================="
-        print eq
+        A = f.jacobian([self.q[i] for i in xrange(len(self.q) - 1)]) 
+        B = f.jacobian([self.qdot[i] for i in xrange(len(self.qdot) - 1)])
+        C = f.jacobian([self.rho[i] for i in xrange(len(self.rho) - 1)])        
+        A_r = A.row_join(B)        
+        return A_r, C
         
     def calc_generalized_forces(self, 
                                 thetas, 
@@ -589,18 +511,17 @@ class Test:
                                 ms, 
                                 g,
                                 viscous):
-        V = 0.0               
-        for i in xrange(len(Ocs)): 
-            el = ms[i + 1] * g * Ocs[i][2]                                           
-            V += el
-        
+        V = 0.0                          
+        for i in xrange(len(Ocs)):            
+            el = ms[i + 1] * g.transpose() * Ocs[i]                                                
+            V += el[0]               
         N = 0
         if self.simplifying:    
             N = Matrix([[trigsimp(diff(V, thetas[i]))] for i in xrange(len(thetas) - 1)]) 
         else:
-            N = Matrix([[diff(V, thetas[i])] for i in xrange(len(thetas) - 1)])
-        K = N - Matrix([[viscous * dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
-        return N      
+            N = Matrix([[diff(V, thetas[i])] for i in xrange(len(thetas) - 1)])        
+        K = N + Matrix([[viscous * dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
+        return K      
         
     def calc_coriolis_matrix(self, thetas, dot_thetas, M):        
         C = Matrix([[0.0 for m in xrange(len(thetas) - 1)] for n in xrange(len(thetas) - 1)])
@@ -656,7 +577,7 @@ class Test:
                                       [joint_origins[i][2]]]) - 
                               Matrix([[com_coordinates[i][0]],
                                       [com_coordinates[i][1]],
-                                      [com_coordinates[i][2]]]) for i in xrange(1, len(joint_origins))]
+                                      [com_coordinates[i][2]]]) for i in xrange(1, len(joint_origins))]        
         
         """
         Transformation matrix from the center of masses to the next joint origins
@@ -670,12 +591,7 @@ class Test:
         
         """
         Transformations from the link origins to the center of masses
-        """
-        #print joint_origins[len(com_coordinates) - 1][5]
-        '''print (joint_origins[0][3] + axis[0][0] * thetas[0],
-               joint_origins[0][4] + axis[0][1] * thetas[0],
-               joint_origins[0][5] + axis[0][2] * thetas[0])
-        sleep'''
+        """        
         dhcs = [self.transform(com_coordinates[i + 1][0], 
                                com_coordinates[i + 1][1], 
                                com_coordinates[i + 1][2], 
@@ -719,8 +635,7 @@ class Test:
                 Os.append(trigsimp(O))
             else:
                 Os.append(O)
-            zs.append(z)        
-        #r1 = trigsimp(Matrix([zcs[0].cross(Ocs[1] - Os[1])]))
+            zs.append(z)
         Jvs = []
         for i in xrange(len(thetas) - 1):
             Jv = Matrix([[0.0 for m in xrange(len(thetas) - 1)] for n in xrange(6)])
@@ -736,7 +651,10 @@ class Test:
             if self.simplifying:
                 Jvs.append(trigsimp(Jv))
             else:
-                Jvs.append(Jv)                
+                Jvs.append(Jv) 
+        if self.simplifying:
+            Jvs = [nsimplify(Jvs[i], [pi]) for i in xrange(len(Jvs))]  
+            Ocs = [nsimplify(Ocs[i], [pi]) for i in xrange(len(Ocs))]             
         return Jvs, Ocs
     
     def transform(self, x, y, z, r, p, yaw):

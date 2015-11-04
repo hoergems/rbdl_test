@@ -33,24 +33,18 @@ void StatePropagator::propagate(const ompl::base::State *state,
     unsigned int dim = space_information_->getStateSpace()->getDimension() / 2;    
     std::vector<double> current_vel;
     if (linear_propagation_) {
-    	std::vector<double> thetas_star;
-    	std::vector<double> rhos_star;
-    	std::vector<double> current_state;
-    	std::vector<double> integration_result;
+    	std::vector<double> state_vec;
+    	std::vector<double> control_vec;    	
     	std::vector<double> integration_times({0.0, duration, duration});
-    	for (unsigned int i = 0; i < dim; i++) {
-    		thetas_star.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
-    		current_vel.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i + dim]);    		
-    		rhos_star.push_back(control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[i]);
-    		integration_result.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
-    	}    	
-    	for (unsigned int i = 0; i < dim; i++) {
-    		integration_result.push_back(current_vel[i]);
-    	}
+    	for (unsigned int i = 0; i < 2 * dim; i++) {
+    		state_vec.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);    		
+    		if (i < dim) {
+    			control_vec.push_back(control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[i]);
+    		}    		
+    	}  	
     	
-    	linear_integrator_.setup(thetas_star, current_vel, rhos_star);
     	//boost::timer t;
-    	linear_integrator_.do_integration(integration_result, integration_times);
+    	linear_integrator_.do_integration(state_vec, control_vec, integration_times);
     	//cout << "Integrated in " << t.elapsed() << "seconds" << endl;
     	if (verbose_) {
 			cout << "start state: ";
@@ -62,7 +56,7 @@ void StatePropagator::propagate(const ompl::base::State *state,
 			
 			cout << "control: ";
 			for (unsigned int i = 0; i < dim; i++) { 
-				cout << rhos_star[i] << ", ";
+				cout << control_vec[i] << ", ";
 			}    	
 			cout << endl;
 			
@@ -70,7 +64,7 @@ void StatePropagator::propagate(const ompl::base::State *state,
 			
 			cout << "result: "; 
 			for (unsigned int i = 0; i < 2 * dim; i++) { 
-				cout << integration_result[i] << ", ";
+				cout << state_vec[i] << ", ";
 			} 
 			cout << endl;
 			cout << "=================================" << endl;
@@ -78,18 +72,18 @@ void StatePropagator::propagate(const ompl::base::State *state,
     	}
     	
     	for (unsigned int i = 0; i < dim; i++) {
-    		if (integration_result[i] > M_PI) {
-    			integration_result[i] = -2.0 * M_PI + integration_result[i]; 
+    		if (state_vec[i] > M_PI) {
+    			state_vec[i] = -2.0 * M_PI + state_vec[i]; 
     			//integration_result[i] = integration_result[i] - 2.0 * M_PI;
     		}
-    		else if (integration_result[i] < -M_PI) {
-    			integration_result[i] = 2.0 * M_PI + integration_result[i];
+    		else if (state_vec[i] < -M_PI) {
+    			state_vec[i] = 2.0 * M_PI + state_vec[i];
     			//integration_result[i] = integration_result[i] + 2.0 * M_PI;
     		}
     	}
     	
     	for (unsigned int i = 0; i < 2 * dim; i++) {
-    	    result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i] = integration_result[i];
+    	    result->as<ompl::base::RealVectorStateSpace::StateType>()->values[i] = state_vec[i];
     	}
     	return;
     }
@@ -116,14 +110,12 @@ void StatePropagator::propagate(const ompl::base::State *state,
     for (unsigned int i = 0; i < dim; i++) {
     	current_joint_values.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
     	current_joint_velocities.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i + dim]);
-    	//input_torque.push_back(control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[i]);
-    	input_torque.push_back(1.0);
+    	input_torque.push_back(control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[i]);
+    	//input_torque.push_back(1.0);
     }
     
     current_joint_values.push_back(0.0);
-    current_joint_velocities.push_back(0.0); 
-    
-    
+    current_joint_velocities.push_back(0.0);
     
     std::vector<double> propagation_result;
     propagator_->propagate_nonlinear(environment_,

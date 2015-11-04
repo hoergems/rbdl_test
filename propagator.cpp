@@ -35,12 +35,7 @@ void Propagator::propagate_nonlinear(OpenRAVE::EnvironmentBasePtr environment,
 	std::vector<double> current_vel;
 	const std::vector<OpenRAVE::KinBody::JointPtr> joints(robot->GetJoints());
 	std::vector<OpenRAVE::dReal> input_torques(control);
-	std::vector<OpenRAVE::dReal> damped_torques;
-	
-	for (size_t i = 0; i < joints.size(); i++) {
-		input_torques.push_back(0);
-		damped_torques.push_back(0);  
-	}
+	std::vector<OpenRAVE::dReal> damped_torques(control);
 	
 	const std::vector<OpenRAVE::dReal> currentJointValues(current_joint_values);
 	const std::vector<OpenRAVE::dReal> currentJointVelocities(current_joint_velocities);	    
@@ -54,7 +49,7 @@ void Propagator::propagate_nonlinear(OpenRAVE::EnvironmentBasePtr environment,
 	    damper_->damp_torques(current_vel,
 	                          damped_torques);
 	    for (size_t k = 0; k < joints.size(); k++) {
-	        input_torques[k] = input_torques[k]; //+ damped_torques[k];
+	        input_torques[k] = input_torques[k] + damped_torques[k];
 	        const std::vector<OpenRAVE::dReal> torques({input_torques[k]});
 	        joints[k]->AddTorque(torques);
 	    }        
@@ -66,6 +61,11 @@ void Propagator::propagate_nonlinear(OpenRAVE::EnvironmentBasePtr environment,
 	std::vector<OpenRAVE::dReal> newJointVelocities;	    
 	robot->GetDOFValues(newJointValues);
 	robot->GetDOFVelocities(newJointVelocities);
+	
+	for (size_t i = 0; i < newJointVelocities.size(); i++) {
+		cout << newJointVelocities[i] << ", ";
+	}
+	cout << endl;
 	
 	for (size_t i = 0; i < joints.size(); i++) {
 		result.push_back(newJointValues[i]);

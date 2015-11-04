@@ -23,13 +23,11 @@ namespace shared {
     	
     	Integrate();
     	
-    	void do_integration(std::vector<double> &x, std::vector<double> &int_times) const;
+    	void do_integration(std::vector<double> &x,
+    			            std::vector<double> &control,
+    			            std::vector<double> &int_times) const;
     	
     	void ode(const state_type &x , state_type &dxdt , double t) const;
-    	
-    	void setup(std::vector<double> &thetas_star, 
-    			   std::vector<double> &dot_thetas_star, 
-    			   std::vector<double> &rhos_star) const;
     	
     	std::vector<double> getResult();
     	
@@ -43,23 +41,19 @@ MatrixXd getA0(const state_type &x) const;
         // A member function pointer for the above declared member function type
     	typedef ABFuncType Integrate::* AB_funct;
     	
-
-    	
     	void setupSteadyStates() const;
     	
-    	std::pair<Integrate::AB_funct, Integrate::AB_funct> getClosestSteadyStateFunctions(const state_type &x) const; 
+    	std::pair<int, std::vector<double>> getClosestSteadyState(const state_type &x) const;
     	
-    	mutable std::vector<double> thetas_star_;
-    	
-    	mutable std::vector<double> dot_thetas_star_;
-    	
-    	mutable std::vector<double> rhos_star_;
+    	std::pair<Integrate::AB_funct, Integrate::AB_funct> getClosestSteadyStateFunctions(int &idx) const;
     	
     	mutable std::vector<double> rho;
     	
     	mutable std::vector<double> result_;
     	
     	mutable std::vector<std::vector<double>> steady_states_;
+    	
+    	mutable std::pair<int, std::vector<double>> closest_steady_state_;
     	
     	mutable std::map<int, AB_funct> a_map_;
     	

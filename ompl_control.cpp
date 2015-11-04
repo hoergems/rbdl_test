@@ -65,9 +65,9 @@ OMPLControlTest::OMPLControlTest(const std::string &model_file,
     /***** Create the physics engine *****/
     const std::string engine = "ode";
     OpenRAVE::PhysicsEngineBasePtr physics_engine_ = OpenRAVE::RaveCreatePhysicsEngine(env_, engine);
-    //const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});
-    //const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});
-    const OpenRAVE::Vector gravity({0.0, 0.0, 0.0});
+    
+    const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});
+    //const OpenRAVE::Vector gravity({0.0, 0.0, 0.0});
     physics_engine_->SetGravity(gravity);
     env_->SetPhysicsEngine(physics_engine_);
     cout << "setting up state propagator" << endl;
@@ -431,8 +431,8 @@ void OMPLControlTest::testPhysics(double &simulation_step_size, double &coulomb,
 int main(int argc, char** argv) {
     double coulomb = 0.0;
     double viscous = 1.0;
-    double control_duration = 0.0005;
-    double simulation_step_size = 0.0001;    
+    double control_duration = 0.005;
+    double simulation_step_size = 0.001;    
     double time_limit = 10.0;
     bool linear_propagation = false;
     bool verbose = true;
