@@ -15,7 +15,8 @@ SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${ompl_test_SOURCE_DIR})
 include_directories(/usr/include/eigen3 
                     /usr/inclue/boost 
                     /usr/include/python2.7
-                    /usr/local/include/openrave-0.9)
+                    /usr/local/include/openrave-0.9
+                    /usr/local/include/ompl)
 
 # set the path to the library folder
 link_directories(/usr/lib /usr/local/lib /opt/ros/indigo/lib)
@@ -25,7 +26,21 @@ add_library(robot SHARED robot.cpp)
 
 add_library(integrate SHARED integrate.cpp)
 
-add_library(dynamic_planner SHARED ompl_control.cpp)
+add_library(dynamic_planner SHARED 
+            ompl_control.cpp 
+            MotionValidator.cpp
+            state_propagator.cpp
+            propagator.cpp
+            integrate.cpp
+            ManipulatorGoalRegion.cpp
+            utils.cpp
+            Obstacle.cpp
+            Terrain.cpp
+            Kinematics.cpp
+            viewer.cpp
+            torque_damper.cpp
+            control_space.cpp
+            control_sampler.cpp)
 
 #add_executable(ompl_test 
 #               ompl_control.cpp 

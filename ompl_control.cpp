@@ -9,13 +9,15 @@ using std::endl;
 
 namespace shared {
 
-OMPLControl::OMPLControl(std::string model_file,
+OMPLControl::OMPLControl(std::shared_ptr<Kinematics> kinematics,
+		                 std::string model_file,
                          double control_duration,
                          double simulation_step_size,
                          double coulomb,
                          double viscous,
                          bool linear_propagation,
-                         bool verbose):    
+                         bool verbose):
+    kinematics_(kinematics),
     control_duration_(control_duration),
     state_space_(nullptr),
     state_space_bounds_(1),
@@ -25,6 +27,11 @@ OMPLControl::OMPLControl(std::string model_file,
     planner_(nullptr),
     state_propagator_(nullptr),
     env_(nullptr),
+    motionValidator_(new MotionValidator(space_information_, 
+                                         kinematics_, 
+                                         obstacles_,
+                                         control_duration_,
+                                         true)),
     verbose_(verbose)
 {
     /***** Initialize OpenRAVE *****/
@@ -186,23 +193,51 @@ bool OMPLControl::solve_(double &time_limit) {
     return true;
 }
 
-PathControlPtr OMPLControl::test(double &time_limit) {
-    // Set the start and goal state
-    ompl::base::ScopedState<> start_state(state_space_);
-    ompl::base::ScopedState<> goal_state(state_space_);
-    for (unsigned int i = 0; i < state_space_dimension_; i++) {
-        start_state[i] = 0.0;
-        goal_state[i] = 0.0;
+void OMPLControl::setGoalStates(std::vector<std::vector<double>> &goal_states,
+                                std::vector<double> &ee_goal_position,
+                                double &ee_goal_threshold) {
+    for (size_t i = 0; i < goal_states.size(); i++) {
+        goal_states_.push_back(goal_states[i]);
     }
     
-    goal_state[0] = M_PI / 2.0;
-    goal_state[1] = 0.0;
-    goal_state[2] = 0.0;
+    ee_goal_position_.clear();
+    for (size_t i = 0; i < ee_goal_position.size(); i++) {
+    	ee_goal_position_.push_back(ee_goal_position[i]);
+    }
+    
+    ee_goal_threshold_ = ee_goal_threshold;
+}
 
-    const ompl::base::GoalPtr goal_ptr(new ManipulatorGoalState(space_information_, goal_state)); 
+void OMPLControl::setObstacles(std::vector<std::shared_ptr<Obstacle> > obstacles) {
+    for (size_t i = 0; i < obstacles.size(); i++) {        
+        obstacles_.push_back(obstacles[i]);
+    }
+    static_cast<MotionValidator &>(*motionValidator_).setObstacles(obstacles_);
+}
+
+void OMPLControl::setObstaclesPy(boost::python::list &ns) {
+    for (size_t i = 0; i < len(ns); i++) {
+        obstacles_.push_back(std::make_shared<Obstacle>(boost::python::extract<Obstacle>(ns[i])));
+    }
+
+    static_cast<MotionValidator &>(*motionValidator_).setObstacles(obstacles_);
+}
+
+PathControlPtr OMPLControl::test(double &time_limit) {
+    // Set the start and goal state
+    ompl::base::ScopedState<> start_state(state_space_);    
+    for (unsigned int i = 0; i < state_space_dimension_; i++) {
+        start_state[i] = 0.0;        
+    }
+
+    ompl::base::GoalPtr gp(new ManipulatorGoalRegion(space_information_, 
+    		                                         goal_states_, 
+    		                                         ee_goal_position_, 
+    		                                         ee_goal_threshold_, 
+    		                                         kinematics_));
     
     problem_definition_->addStartState(start_state);    
-    problem_definition_->setGoal(goal_ptr);
+    problem_definition_->setGoal(gp);
     
     //planner_->setGoalBias(0.1);
     planner_->setup();
@@ -421,7 +456,8 @@ BOOST_PYTHON_MODULE(libdynamic_planner) {
     class_<std::vector<double> > ("v_double")
              .def(vector_indexing_suite<std::vector<double> >());
     
-    class_<OMPLControl>("OMPLControl", init<std::string,
+    class_<OMPLControl>("OMPLControl", init<std::shared_ptr<Kinematics>,
+    		                                std::string,
     		                                double,
 										    double,
 										    double,

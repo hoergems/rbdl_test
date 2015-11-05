@@ -33,10 +33,10 @@ class Test:
         M_is = self.construct_link_inertia_matrices(self.link_masses, self.Is)        
         print "Calculating inertia matrix"
         M = self.calc_inertia_matrix(Jvs, M_is)
-               
+        
         if self.simplifying:
-            M = trigsimp(M)        
-                 
+            M = trigsimp(M)
+            M = nsimplify(M, tolerance=1e-7)        
         print "Calculating coriolis matrix"
         C = self.calc_coriolis_matrix(self.q, self.qdot, M)
         if self.simplifying:
@@ -52,16 +52,21 @@ class Test:
         if self.simplifying:      
             N = trigsimp(N)        
         print "Get dynamic model"        
-        f, M_inv = self.get_dynamic_model(M, C, N, self.q, self.qdot, self.rho)           
+        f, M_inv = self.get_dynamic_model(M, C, N, self.q, self.qdot, self.rho)        
+                  
         print "Build taylor approximation" 
         steady_states = self.get_steady_states(f)
         print "Get partial derivatives"
         A, B = self.partial_derivatives2(f)
-        
+        if self.simplifying:
+            A = simplify(A)
+            B = simplify(B)      
         print "Clean cpp code"
         self.clean_cpp_code()
         print "Gen cpp code"
-        self.gen_cpp_code_steady_states(steady_states)    
+        self.gen_cpp_code_steady_states(steady_states) 
+        print "Steady states code generated"
+        print "Generate cpp code for linearized model..."   
         for i in xrange(len(steady_states)):
             A, B = self.substitude_steady_states2(A, B, steady_states[i]) 
             self.gen_cpp_code2(A, "A" + str(i))
@@ -406,54 +411,13 @@ class Test:
                 f.write(line)
         with open("integrate.hpp", 'a+') as f:
             for line in lines_header:
-                f.write(line)
-                            
-            
-                
-    def gen_cpp_code(self, fot):
-        lines = list(open("integrate.cpp", 'r'))
-        idx1 = -1 
-        idx2 = -1 
-        temp_lines = []     
-        for i in xrange(len(lines)):
-            if "void Integrate::ode" in lines[i]:
-                idx1 = i 
-            elif "BOOST_PYTHON_MODULE(libintegrate)" in lines[i]:
-                idx2 = i
-        temp_lines.append("\n")
-        temp_lines.append("void Integrate::ode(const state_type &x , state_type &dxdt , double t) const { \n")       
-        temp_lines.append("std::vector<double> terms({")        
-        for i in xrange(len(fot)):
-            temp_lines.append(ccode(fot[i]))            
-            if i != len(fot) - 1:
-                temp_lines.append(", \n")               
-        temp_lines.append("}); \n")       
-        temp_lines.append("dxdt.clear(); \n")
-        temp_lines.append("for(size_t i = 0; i < x.size(); i++) { dxdt.push_back(terms[i]); } \n")
-        temp_lines.append("} \n")       
-        
-        del lines[idx1:idx2]
-        idx = -1
-        for i in xrange(len(lines)):
-            if "BOOST_PYTHON_MODULE(libintegrate)" in lines[i]:
-                idx = i
-        lines[idx-1:idx-1] = temp_lines    
-        '''if not idx1 == -1:
-            lines[idx1] = cpp_string'''
-            
-        os.remove("integrate.cpp")
-        with open("integrate.cpp", 'a+') as f:
-            for line in lines:
-                f.write(line)
-        
+                f.write(line)    
         
     def get_dynamic_model(self, M, C, N, thetas, dot_thetas, rs): 
         print "Inverting inertia matrix"              
         t0 = time.time()
-        M_inv = M.inv("LU")
-        #M_inv = M.inv()
-        
-        print "Inverted inertia matrix. Simplifying..."        
+        #M_inv = M.inv("LU")
+        M_inv = M.inv()      
         print "time to invert: " + str(time.time() - t0)        
         Thetas = Matrix([[thetas[i]] for i in xrange(len(thetas) - 1)])
         Dotthetas = Matrix([[dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
@@ -461,11 +425,10 @@ class Test:
         print "Constructing non-linear differential equation"
         m_upper = Matrix([[dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
         m_lower = 0
-        if self.simplifying:
-            m_lower = trigsimp(-M_inv * trigsimp(C * Dotthetas + N) + M_inv * Rs) 
-            
-        else:
-            m_lower = M_inv * (Rs - C * Dotthetas - N)
+        '''if self.simplifying:
+            m_lower = trigsimp(-M_inv * trigsimp(C * Dotthetas + N) + M_inv * Rs)           
+        else:'''
+        m_lower = M_inv * (Rs - C * Dotthetas - N)
         h = m_upper.col_join(m_lower)        
         return h, M_inv
     

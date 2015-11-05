@@ -9,12 +9,12 @@ class InteTest:
         
         current_state = v_double()
         
-        controls[:] = [1.0, 0.0, 0.0]
-        current_state[:] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        controls[:] = [0.0, 0.0]
+        current_state[:] = [0.0, 0.0, 0.0, 0.0]
         
         t0 = 0.0
-        te = 0.005
-        delt = 0.001
+        te = 0.05
+        delt = 0.05
         
         int_times = v_double()
         int_times[:] = [t0, te, delt]

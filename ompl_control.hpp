@@ -7,10 +7,11 @@
 #include <boost/python.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #include "state_propagator.hpp"
-#include "goal.hpp"
+#include "ManipulatorGoalRegion.hpp"
 #include "viewer.hpp"
 #include "torque_damper.hpp"
 #include "control_space.hpp"
+#include "Obstacle.hpp"
 #include <openrave-core.h>
 #include <openrave/environment.h>
 
@@ -28,8 +29,9 @@
 #include <ompl/base/spaces/RealVectorBounds.h>
 #include <ompl/base/ScopedState.h>
 #include <ompl/base/ProblemDefinition.h>
-//#include <ompl/base/StatePropagatorPtr.h>
 #include <ompl/control/StatePropagator.h>
+#include <ompl/base/MotionValidator.h>
+#include "MotionValidator.hpp"
 
 
 namespace shared {
@@ -38,7 +40,8 @@ namespace shared {
 
     class OMPLControl {
         public:
-        		OMPLControl(std::string model_file,
+        		OMPLControl(std::shared_ptr<Kinematics> kinematics,
+        				    std::string model_file,
         					double control_duration,
 							double simulation_step_size,
 							double coulomb,
@@ -65,8 +68,20 @@ namespace shared {
                 		            double &simulation_step_size,
                 		            double &coulomb,
                 		            double &viscous);
+                
+                void setGoalStates(std::vector<std::vector<double>> &goal_states,
+                           		           std::vector<double> &ee_goal_position,
+                           		           double &ee_goal_threshold);
+                
+                void setObstacles(const std::vector<std::shared_ptr<Obstacle> > obstacles);
+
+                void setObstaclesPy(boost::python::list &ns);
 
         private:
+                std::shared_ptr<Kinematics> kinematics_;
+                
+                ompl::base::MotionValidatorPtr motionValidator_;
+                
                 boost::shared_ptr<TorqueDamper> damper_;
                 
                 double accepted_ = 0.0;
@@ -102,6 +117,14 @@ namespace shared {
                 ompl::control::StatePropagatorPtr state_propagator_;
 
                 OpenRAVE::EnvironmentBasePtr env_;
+                
+                std::vector<std::shared_ptr<Obstacle> > obstacles_;
+                
+                std::vector<std::vector<double>> goal_states_;
+                
+                std::vector<double> ee_goal_position_;
+                            
+                double ee_goal_threshold_;
 
                 // Solve the motion planning problem
                 bool solve_(double &time_limit);
