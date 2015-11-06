@@ -10,6 +10,7 @@ from sympy.abc import x
 from mpmath import mp
 
 from scipy.integrate import ode, odeint
+from sympy.integrals.trigonometry import trigintegrate
 from gi.overrides.keysyms import R10
 
 class Test:
@@ -136,35 +137,50 @@ class Test:
         t = symbols("t") 
         t_e = 0.3
         
-        A_exp1 = exp(t * A)
-        A_exp2 = exp(-t * A)
-        A_exp1 = nsimplify(A_exp1, tolerance=1e-7)
-        print A_exp1
-        print "simplifying..."
-        print trigsimp(A_exp1)
-        sleep()   
-        
-        A = A.subs(self.q[0], self.initial[0])
-        A = A.subs(self.q[1], self.initial[1])
-        A = A.subs(self.qdot[0], self.initial[2])
-        A = A.subs(self.qdot[1], self.initial[3])
-        
-        B = B.subs(self.q[0], self.initial[0])
-        B = B.subs(self.q[1], self.initial[1])
-        B = B.subs(self.qdot[0], self.initial[2])
-        B = B.subs(self.qdot[1], self.initial[3])       
-        
         print "Calc matrix exponentials"
         t0 = time.time()
         A_exp1 = exp(t * A)
         A_exp2 = exp(-t * A)
-        print "took " + str(time.time() - t0) + " seconds"
-        t0 = time.time()
-        inte_term = integrate(A_exp2, (t, 0, t_e)) * B * rho
-        print A_exp2
+        print "took " + str(time.time() - t0) + " seconds" 
+        
+        B = B.subs(self.q[0], self.initial[0])
+        B = B.subs(self.q[1], self.initial[1])
+        B = B.subs(self.qdot[0], self.initial[2])
+        B = B.subs(self.qdot[1], self.initial[3])
+        
+        A_exp2 = A_exp2.subs(self.q[0], self.initial[0])
+        A_exp2 = A_exp2.subs(self.q[1], self.initial[1])
+        A_exp2 = A_exp2.subs(self.qdot[0], self.initial[2])
+        A_exp2 = A_exp2.subs(self.qdot[1], self.initial[3])
+        
+        print "calculate integral"
+        integral = integrate(A_exp2, (t, 0, t_e))   
+        
+        A_exp1 = A_exp1.subs(self.q[0], self.initial[0])
+        A_exp1 = A_exp1.subs(self.q[1], self.initial[1])
+        A_exp1 = A_exp1.subs(self.qdot[0], self.initial[2])
+        A_exp1 = A_exp1.subs(self.qdot[1], self.initial[3])
+        
+        
+        
+        
+        
+        integral = integral.subs(self.q[0], self.initial[0])
+        integral = integral.subs(self.q[1], self.initial[1])
+        integral = integral.subs(self.qdot[0], self.initial[2])
+        integral = integral.subs(self.qdot[1], self.initial[3])
+        
+        inte_term = A_exp1 * integral      
+        
+        A_term = A_exp1
+        B_term = inte_term * B
+        
         print "Integration took " + str(time.time() - t0) + " seconds"
-        f = A_exp1 * x_0 + A_exp1 * inte_term        
-        print f.subs(t, 0.3)        
+        f = A_term * x_0 + B_term * rho
+        f = f.subs(t, 0.3)    
+        print f
+        print N(f)
+        sleep       
         
     def get_steady_states(self, f):        
         for i in xrange(len(self.rho)):

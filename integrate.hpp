@@ -34,6 +34,8 @@ namespace shared {
     private:
 MatrixXd getB0(const state_type &x) const; 
 MatrixXd getA0(const state_type &x) const; 
+MatrixXd getB0(const state_type &x) const; 
+MatrixXd getA0(const state_type &x) const; 
     	
     	// A fuction type of he form MatrixXd function(const state_type&) const
         typedef MatrixXd ABFuncType(const state_type&) const; 
