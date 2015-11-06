@@ -7,6 +7,7 @@ import sys
 import argparse
 from sympy.printing import print_ccode
 from sympy.abc import x
+from mpmath import mp
 
 from scipy.integrate import ode, odeint
 from gi.overrides.keysyms import R10
@@ -60,15 +61,19 @@ class Test:
         A, B = self.partial_derivatives2(f)
         if self.simplifying:
             A = simplify(A)
-            B = simplify(B)      
+            B = simplify(B)       
         print "Clean cpp code"
-        self.clean_cpp_code()
+        #self.clean_cpp_code()
         print "Gen cpp code"
-        self.gen_cpp_code_steady_states(steady_states) 
+        #self.gen_cpp_code_steady_states(steady_states) 
         print "Steady states code generated"
-        print "Generate cpp code for linearized model..."   
+        print "Generate cpp code for linearized model..."
+        self.initial = [0.0, 0.0, 0.0, 0.0]
+        self.input = [1.0, 0.0]   
         for i in xrange(len(steady_states)):
-            A, B = self.substitude_steady_states2(A, B, steady_states[i]) 
+            A, B = self.substitude_steady_states2(A, B, steady_states[i])
+            #self.test_ode(A, B, steady_states[i]) 
+            self.test_int(A, B, steady_states[i])
             self.gen_cpp_code2(A, "A" + str(i))
             self.gen_cpp_code2(B, "B" + str(i))
             
@@ -77,6 +82,89 @@ class Test:
             cmd = "cd build && cmake .. && make -j8"           
             os.system(cmd)
         print "Done"
+        
+    def test_ode(self, A, B, steady_state):
+        self.A = A
+        self.B = B
+        self.steady_state = steady_state
+        t = np.linspace(0.0, 0.03, 2)
+        eq = odeint(self.funct, self.initial, t)
+        #print "calc took " + str(time.time() - t0) + " seconds"
+        print "================="
+        print eq
+        sleep
+        
+    def funct(self, x, t):        
+        x1 = Matrix([[self.q[i]] for i in xrange(len(self.q) - 1)])
+        x2 = Matrix([[self.qdot[i]] for i in xrange(len(self.qdot) - 1)])        
+        x_star = x1.col_join(x2)
+        x = Matrix([[x[0]],
+                    [x[1]],
+                    [x[2]],
+                    [x[3]]])
+        
+        
+        
+        rho = Matrix([[self.input[i]] for i in xrange(len(self.input))])
+        rho_star = Matrix([[0.0] for i in xrange(len(self.input))])
+        for key in self.steady_state.keys():
+            x_star = x_star.subs(key, self.steady_state[key])
+        
+        x_star = x_star.subs(self.q[0], self.initial[0])
+        x_star = x_star.subs(self.q[1], self.initial[1])
+        
+        A = self.A.subs(self.q[0], x_star[0])
+        A = self.A.subs(self.q[1], x_star[1])
+        B = self.B.subs(self.q[0], x_star[0])
+        B = self.B.subs(self.q[1], x_star[1])
+                
+        delta_x = x - x_star
+        delta_rho = rho - rho_star
+        sol = A * delta_x + B * rho
+        print "state " + str(x) 
+        print "A " + str(A)
+        print "B " + str(B)
+        
+        #sleep
+        
+        return [sol[i] for i in xrange(len(sol))]
+        
+        
+    def test_int(self, A, B, steady_state):
+        x_0 = Matrix([[self.initial[i]] for i in xrange(len(self.initial))])
+        rho = Matrix([[self.input[i]] for i in xrange(len(self.input))])
+        t = symbols("t") 
+        t_e = 0.3
+        
+        A_exp1 = exp(t * A)
+        A_exp2 = exp(-t * A)
+        A_exp1 = nsimplify(A_exp1, tolerance=1e-7)
+        print A_exp1
+        print "simplifying..."
+        print trigsimp(A_exp1)
+        sleep()   
+        
+        A = A.subs(self.q[0], self.initial[0])
+        A = A.subs(self.q[1], self.initial[1])
+        A = A.subs(self.qdot[0], self.initial[2])
+        A = A.subs(self.qdot[1], self.initial[3])
+        
+        B = B.subs(self.q[0], self.initial[0])
+        B = B.subs(self.q[1], self.initial[1])
+        B = B.subs(self.qdot[0], self.initial[2])
+        B = B.subs(self.qdot[1], self.initial[3])       
+        
+        print "Calc matrix exponentials"
+        t0 = time.time()
+        A_exp1 = exp(t * A)
+        A_exp2 = exp(-t * A)
+        print "took " + str(time.time() - t0) + " seconds"
+        t0 = time.time()
+        inte_term = integrate(A_exp2, (t, 0, t_e)) * B * rho
+        print A_exp2
+        print "Integration took " + str(time.time() - t0) + " seconds"
+        f = A_exp1 * x_0 + A_exp1 * inte_term        
+        print f.subs(t, 0.3)        
         
     def get_steady_states(self, f):        
         for i in xrange(len(self.rho)):

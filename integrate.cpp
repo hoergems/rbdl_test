@@ -105,14 +105,33 @@ void Integrate::ode(const state_type &x , state_type &dxdt , double t) const {
 		state[i + x.size() / 2] = x[i + x.size() / 2] - closest_steady_state_.second[i + x.size() / 2];
 		control_state[i] = rho[i];
 	}
+	for (size_t i = 0; i < state.size(); i++) {
+		cout << state[i] << ", ";
+	}
+	cout << endl;
+	
+	for (size_t i = 0; i < control_state.size(); i++) {
+			cout << control_state[i] << ", ";
+		}
+	cout << endl;
+	
+	
 	
 	auto A = ab_functions_.first;
 	auto B = ab_functions_.second;
+	MatrixXd A_i = (this->*A)(closest_steady_state_.second);
+	MatrixXd B_i = (this->*B)(closest_steady_state_.second);
+	cout << "A " << A_i << endl;
+	cout << "B " << B_i << endl;
 	res = (this->*A)(closest_steady_state_.second) * state + (this->*B)(closest_steady_state_.second) * control_state;	
  	dxdt.clear();
+ 	cout << "res: ";
 	for (size_t i = 0; i < x.size(); i++) {		
 		dxdt.push_back(res(i));
-	}	
+		cout << res[i] << "; ";
+	}
+	cout << endl;
+    //sleep(10);
 }
 
 BOOST_PYTHON_MODULE(libintegrate) {
@@ -126,8 +145,6 @@ BOOST_PYTHON_MODULE(libintegrate) {
                         .def("getResult", &Integrate::getResult)
     ;
 }
-
-MatrixXd Integrate::getA0(const state_type &x) const{ 
 MatrixXd m(4, 4); 
 m(0, 0) = 0; 
 m(0, 1) = 0; 
@@ -139,16 +156,88 @@ m(1, 2) = 0;
 m(1, 3) = 1; 
 m(2, 0) = 0; 
 m(2, 1) = 0; 
-m(2, 2) = 17500.0/(15625.0*pow(cos(x[1]), 2) - 22400.0);
+m(2, 2) = 17500.0/(15625.0*pow(cos(x[1]), 2) - 22400.0); 
 m(2, 3) = -(31250.0*cos(x[1]) + 17500.0)/(15625.0*pow(cos(x[1]), 2) - 22400.0); 
 m(3, 0) = 0; 
 m(3, 1) = 0; 
 m(3, 2) = 50*(-25.0*cos(x[1]) - 14.0)/(625*pow(cos(x[1]), 2) - 896); 
 m(3, 3) = (1.0L/2.0L)*(5000.0*cos(x[1]) + 7800.0)/(625*pow(cos(x[1]), 2) - 896); 
 return m; 
+MatrixXd m(4, 4); 
+m(0, 0) = 0; 
+m(0, 1) = 0; 
+m(0, 2) = 1; 
+m(0, 3) = 0; 
+m(1, 0) = 0; 
+m(1, 1) = 0; 
+m(1, 2) = 0; 
+m(1, 3) = 1; 
+m(2, 0) = 0; 
+m(2, 1) = 0; 
+m(2, 2) = 17500.0/(15625.0*pow(cos(x[1]), 2) - 22400.0); 
+m(2, 3) = -(31250.0*cos(x[1]) + 17500.0)/(15625.0*pow(cos(x[1]), 2) - 22400.0); 
+m(3, 0) = 0; 
+m(3, 1) = 0; 
+m(3, 2) = 50*(-25.0*cos(x[1]) - 14.0)/(625*pow(cos(x[1]), 2) - 896); 
+m(3, 3) = (1.0L/2.0L)*(5000.0*cos(x[1]) + 7800.0)/(625*pow(cos(x[1]), 2) - 896); 
+return m; 
+MatrixXd m(4, 4); 
+m(0, 0) = 0; 
+m(0, 1) = 0; 
+m(0, 2) = 1; 
+m(0, 3) = 0; 
+m(1, 0) = 0; 
+m(1, 1) = 0; 
+m(1, 2) = 0; 
+m(1, 3) = 1; 
+m(2, 0) = 0; 
+m(2, 1) = 0; 
+m(2, 2) = 17500.0/(15625.0*pow(cos(x[1]), 2) - 22400.0); 
+m(2, 3) = -(31250.0*cos(x[1]) + 17500.0)/(15625.0*pow(cos(x[1]), 2) - 22400.0); 
+m(3, 0) = 0; 
+m(3, 1) = 0; 
+m(3, 2) = 50*(-25.0*cos(x[1]) - 14.0)/(625*pow(cos(x[1]), 2) - 896); 
+m(3, 3) = (1.0L/2.0L)*(5000.0*cos(x[1]) + 7800.0)/(625*pow(cos(x[1]), 2) - 896); 
+return m; 
+MatrixXd m(4, 4); 
+m(0, 0) = 0; 
+m(0, 1) = 0; 
+m(0, 2) = 1; 
+m(0, 3) = 0; 
+m(1, 0) = 0; 
+m(1, 1) = 0; 
+m(1, 2) = 0; 
+m(1, 3) = 1; 
+m(2, 0) = 0; 
+m(2, 1) = 0; 
+m(2, 2) = 17500.0/(15625.0*pow(cos(x[1]), 2) - 22400.0); 
+m(2, 3) = -(31250.0*cos(x[1]) + 17500.0)/(15625.0*pow(cos(x[1]), 2) - 22400.0); 
+m(3, 0) = 0; 
+m(3, 1) = 0; 
+m(3, 2) = 50*(-25.0*cos(x[1]) - 14.0)/(625*pow(cos(x[1]), 2) - 896); 
+m(3, 3) = (1.0L/2.0L)*(5000.0*cos(x[1]) + 7800.0)/(625*pow(cos(x[1]), 2) - 896); 
+return m; 
+MatrixXd m(4, 4); 
+m(0, 0) = 0; 
+m(0, 1) = 0; 
+m(0, 2) = 1; 
+m(0, 3) = 0; 
+m(1, 0) = 0; 
+m(1, 1) = 0; 
+m(1, 2) = 0; 
+m(1, 3) = 1; 
+m(2, 0) = 0; 
+m(2, 1) = 0; 
+m(2, 2) = 17500.0/(15625.0*pow(cos(x[1]), 2) - 22400.0); 
+m(2, 3) = -(31250.0*cos(x[1]) + 17500.0)/(15625.0*pow(cos(x[1]), 2) - 22400.0); 
+m(3, 0) = 0; 
+m(3, 1) = 0; 
+m(3, 2) = 50*(-25.0*cos(x[1]) - 14.0)/(625*pow(cos(x[1]), 2) - 896); 
+m(3, 3) = (1.0L/2.0L)*(5000.0*cos(x[1]) + 7800.0)/(625*pow(cos(x[1]), 2) - 896); 
+return m; 
+MatrixXd Integrate::getA0(const state_type &x) const{ 
 
 } 
-MatrixXd Integrate::getB0(const state_type &x) const{ 
 MatrixXd m(4, 2); 
 m(0, 0) = 0; 
 m(0, 1) = 0; 
@@ -159,6 +248,47 @@ m(2, 1) = 50*(25*cos(x[1]) + 14)/(625*pow(cos(x[1]), 2) - 896);
 m(3, 0) = 50*(25*cos(x[1]) + 14)/(625*pow(cos(x[1]), 2) - 896); 
 m(3, 1) = -(2500*cos(x[1]) + 3900)/(625*pow(cos(x[1]), 2) - 896); 
 return m; 
+MatrixXd m(4, 2); 
+m(0, 0) = 0; 
+m(0, 1) = 0; 
+m(1, 0) = 0; 
+m(1, 1) = 0; 
+m(2, 0) = -700/(625*pow(cos(x[1]), 2) - 896); 
+m(2, 1) = 50*(25*cos(x[1]) + 14)/(625*pow(cos(x[1]), 2) - 896); 
+m(3, 0) = 50*(25*cos(x[1]) + 14)/(625*pow(cos(x[1]), 2) - 896); 
+m(3, 1) = -(2500*cos(x[1]) + 3900)/(625*pow(cos(x[1]), 2) - 896); 
+return m; 
+MatrixXd m(4, 2); 
+m(0, 0) = 0; 
+m(0, 1) = 0; 
+m(1, 0) = 0; 
+m(1, 1) = 0; 
+m(2, 0) = -700/(625*pow(cos(x[1]), 2) - 896); 
+m(2, 1) = 50*(25*cos(x[1]) + 14)/(625*pow(cos(x[1]), 2) - 896); 
+m(3, 0) = 50*(25*cos(x[1]) + 14)/(625*pow(cos(x[1]), 2) - 896); 
+m(3, 1) = -(2500*cos(x[1]) + 3900)/(625*pow(cos(x[1]), 2) - 896); 
+return m; 
+MatrixXd m(4, 2); 
+m(0, 0) = 0; 
+m(0, 1) = 0; 
+m(1, 0) = 0; 
+m(1, 1) = 0; 
+m(2, 0) = -700/(625*pow(cos(x[1]), 2) - 896); 
+m(2, 1) = 50*(25*cos(x[1]) + 14)/(625*pow(cos(x[1]), 2) - 896); 
+m(3, 0) = 50*(25*cos(x[1]) + 14)/(625*pow(cos(x[1]), 2) - 896); 
+m(3, 1) = -(2500*cos(x[1]) + 3900)/(625*pow(cos(x[1]), 2) - 896); 
+return m; 
+MatrixXd m(4, 2); 
+m(0, 0) = 0; 
+m(0, 1) = 0; 
+m(1, 0) = 0; 
+m(1, 1) = 0; 
+m(2, 0) = -700/(625*pow(cos(x[1]), 2) - 896); 
+m(2, 1) = 50*(25*cos(x[1]) + 14)/(625*pow(cos(x[1]), 2) - 896); 
+m(3, 0) = 50*(25*cos(x[1]) + 14)/(625*pow(cos(x[1]), 2) - 896); 
+m(3, 1) = -(2500*cos(x[1]) + 3900)/(625*pow(cos(x[1]), 2) - 896); 
+return m; 
+MatrixXd Integrate::getB0(const state_type &x) const{ 
 
 } 
  
