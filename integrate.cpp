@@ -60,11 +60,12 @@ std::vector<double> steady_state_0({-1, -1, 0.0, 0.0});
 steady_states_.push_back(steady_state_0); 
 a_map_.insert(std::make_pair(0, &Integrate::getA0)); 
 b_map_.insert(std::make_pair(0, &Integrate::getB0)); 
+v_map_.insert(std::make_pair(0, &Integrate::getV0)); 
 	
 }
 
-std::pair<Integrate::AB_funct, Integrate::AB_funct> Integrate::getClosestSteadyStateFunctions(int &idx) const {
-	return std::make_pair(a_map_.find(idx)->second, b_map_.find(idx)->second);
+std::pair<Integrate::AB_funct, std::pair<Integrate::AB_funct, Integrate::AB_funct>> Integrate::getClosestSteadyStateFunctions(int &idx) const {
+	return std::make_pair(a_map_.find(idx)->second, std::make_pair(b_map_.find(idx)->second, v_map_.find(idx)->second));
 }
 
 std::pair<int, std::vector<double>> Integrate::getClosestSteadyState(const state_type &x) const {
@@ -99,11 +100,13 @@ void Integrate::ode(const state_type &x , state_type &dxdt , double t) const {
 	VectorXd res(x.size());
 	
 	VectorXd state(x.size());
-	VectorXd control_state(x.size() / 2);	
+	VectorXd control_state(x.size() / 2);
+	VectorXd input_noise(x.size() / 2);
 	for (size_t i = 0; i < x.size() / 2; i++) {
 		state[i] = x[i] - closest_steady_state_.second[i];
 		state[i + x.size() / 2] = x[i + x.size() / 2] - closest_steady_state_.second[i + x.size() / 2];
 		control_state[i] = rho[i];
+		input_noise[i] = 0.0;
 	}
 	for (size_t i = 0; i < state.size(); i++) {
 		cout << state[i] << ", ";
@@ -118,12 +121,16 @@ void Integrate::ode(const state_type &x , state_type &dxdt , double t) const {
 	
 	
 	auto A = ab_functions_.first;
-	auto B = ab_functions_.second;
+	auto B = ab_functions_.second.first;
+	auto V = ab_functions_.second.second;
 	MatrixXd A_i = (this->*A)(closest_steady_state_.second);
 	MatrixXd B_i = (this->*B)(closest_steady_state_.second);
+	MatrixXd V_i = (this->*V)(closest_steady_state_.second);
 	cout << "A " << A_i << endl;
 	cout << "B " << B_i << endl;
-	res = (this->*A)(closest_steady_state_.second) * state + (this->*B)(closest_steady_state_.second) * control_state;	
+	res = (this->*A)(closest_steady_state_.second) * state + 
+		  (this->*B)(closest_steady_state_.second) * control_state +
+		  (this->*V)(closest_steady_state_.second) * input_noise;	
  	dxdt.clear();
  	cout << "res: ";
 	for (size_t i = 0; i < x.size(); i++) {		
@@ -145,5 +152,52 @@ BOOST_PYTHON_MODULE(libintegrate) {
                         .def("getResult", &Integrate::getResult)
     ;
 }
+MatrixXd Integrate::getA0(const state_type &x) const{ 
+MatrixXd m(4, 4); 
+m(0, 0) = 0; 
+m(0, 1) = 0; 
+m(0, 2) = 1; 
+m(0, 3) = 0; 
+m(1, 0) = 0; 
+m(1, 1) = 0; 
+m(1, 2) = 0; 
+m(1, 3) = 1; 
+m(2, 0) = 0; 
+m(2, 1) = 0; 
+m(2, 2) = 17500.0/(15625.0*pow(cos(x[1]), 2) - 22400.0); 
+m(2, 3) = -(31250.0*cos(x[1]) + 17500.0)/(15625.0*pow(cos(x[1]), 2) - 22400.0); 
+m(3, 0) = 0; 
+m(3, 1) = 0; 
+m(3, 2) = 50*(-25.0*cos(x[1]) - 14.0)/(625*pow(cos(x[1]), 2) - 896); 
+m(3, 3) = (1.0L/2.0L)*(5000.0*cos(x[1]) + 7800.0)/(625*pow(cos(x[1]), 2) - 896); 
+return m; 
 
+} 
+MatrixXd Integrate::getB0(const state_type &x) const{ 
+MatrixXd m(4, 2); 
+m(0, 0) = 0; 
+m(0, 1) = 0; 
+m(1, 0) = 0; 
+m(1, 1) = 0; 
+m(2, 0) = -700/(625*pow(cos(x[1]), 2) - 896); 
+m(2, 1) = 50*(25*cos(x[1]) + 14)/(625*pow(cos(x[1]), 2) - 896); 
+m(3, 0) = 50*(25*cos(x[1]) + 14)/(625*pow(cos(x[1]), 2) - 896); 
+m(3, 1) = -(2500*cos(x[1]) + 3900)/(625*pow(cos(x[1]), 2) - 896); 
+return m; 
+
+} 
+MatrixXd Integrate::getV0(const state_type &x) const{ 
+MatrixXd m(4, 2); 
+m(0, 0) = 0; 
+m(0, 1) = 0; 
+m(1, 0) = 0; 
+m(1, 1) = 0; 
+m(2, 0) = -700/(625*pow(cos(x[1]), 2) - 896); 
+m(2, 1) = 50*(25*cos(x[1]) + 14)/(625*pow(cos(x[1]), 2) - 896); 
+m(3, 0) = 50*(25*cos(x[1]) + 14)/(625*pow(cos(x[1]), 2) - 896); 
+m(3, 1) = -(2500*cos(x[1]) + 3900)/(625*pow(cos(x[1]), 2) - 896); 
+return m; 
+
+} 
+ 
 }

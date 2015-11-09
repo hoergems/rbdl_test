@@ -7,7 +7,7 @@ import sys
 import argparse
 from sympy.printing import print_ccode
 from sympy.abc import x
-from mpmath import mp
+import mpmath as mp
 
 from scipy.integrate import ode, odeint
 from sympy.integrals.trigonometry import trigintegrate
@@ -17,10 +17,6 @@ class Test:
     def __init__(self, model, simplifying, buildcpp):
         self.simplifying = simplifying
         self.parse_urdf(model)
-        #g = 9.81
-        ''''g = Matrix([[0], 
-                    [0],
-                    [9.81]])'''
         g = Matrix([[0],
                     [0],
                     [9.81]])       
@@ -54,29 +50,30 @@ class Test:
         if self.simplifying:      
             N = trigsimp(N)        
         print "Get dynamic model"        
-        f, M_inv = self.get_dynamic_model(M, C, N, self.q, self.qdot, self.rho)        
-                  
+        f, M_inv = self.get_dynamic_model(M, C, N, self.q, self.qdot, self.rho, self.zeta)
         print "Build taylor approximation" 
         steady_states = self.get_steady_states(f)
         print "Get partial derivatives"
-        A, B = self.partial_derivatives2(f)
+        A, B, V = self.partial_derivatives2(f)
         if self.simplifying:
             A = simplify(A)
-            B = simplify(B)       
+            B = simplify(B)
+            V = simplify(V)       
         print "Clean cpp code"
-        #self.clean_cpp_code()
+        self.clean_cpp_code()
         print "Gen cpp code"
-        #self.gen_cpp_code_steady_states(steady_states) 
+        self.gen_cpp_code_steady_states(steady_states) 
         print "Steady states code generated"
         print "Generate cpp code for linearized model..."
-        self.initial = [0.0, 0.0, 0.0, 0.0]
-        self.input = [1.0, 0.0]   
+        self.initial = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        self.input = [1.0, 0.0, 0.0]   
         for i in xrange(len(steady_states)):
-            A, B = self.substitude_steady_states2(A, B, steady_states[i])
+            A, B, V = self.substitude_steady_states2(A, B, V, steady_states[i])
             #self.test_ode(A, B, steady_states[i]) 
-            self.test_int(A, B, steady_states[i])
+            #self.test_int(A, B, steady_states[i])
             self.gen_cpp_code2(A, "A" + str(i))
             self.gen_cpp_code2(B, "B" + str(i))
+            self.gen_cpp_code2(V, "V" + str(i))
             
         if buildcpp:
             print "Build c++ code..."
@@ -129,53 +126,71 @@ class Test:
         #sleep
         
         return [sol[i] for i in xrange(len(sol))]
-        
+    
+    def test_power_series(self, A, T):
+        #series = T * (-A*T / mp.factorial(2) + power(-A*T, 3) / mp.factorial(3) + power(-A*T, 3) / mp.factorial(4))
+               
+        series =  T* (eye(4) +
+                      ((-A*T) / mp.factorial(2)) + 
+                      (-A*T)**2 / mp.factorial(3) + 
+                      (-A*T)**3 / mp.factorial(4) +
+                      (-A*T)**4 / mp.factorial(5) +
+                      (-A*T)**5 / mp.factorial(6) +
+                      (-A*T)**6 / mp.factorial(7) +
+                      (-A*T)**7 / mp.factorial(8) +
+                      (-A*T)**8 / mp.factorial(9) +
+                      (-A*T)**9 / mp.factorial(10) +
+                      (-A*T)**10 / mp.factorial(11) +
+                      (-A*T)**11 / mp.factorial(12) +
+                      (-A*T)**12 / mp.factorial(13) +
+                      (-A*T)**13 / mp.factorial(14))        
+        return series
+                
         
     def test_int(self, A, B, steady_state):
         x_0 = Matrix([[self.initial[i]] for i in xrange(len(self.initial))])
         rho = Matrix([[self.input[i]] for i in xrange(len(self.input))])
         t = symbols("t") 
-        t_e = 0.3
-        
+        t_e = 0.03        
         print "Calc matrix exponentials"
         t0 = time.time()
-        A_exp1 = exp(t * A)
-        A_exp2 = exp(-t * A)
-        print "took " + str(time.time() - t0) + " seconds" 
         
-        B = B.subs(self.q[0], self.initial[0])
-        B = B.subs(self.q[1], self.initial[1])
-        B = B.subs(self.qdot[0], self.initial[2])
-        B = B.subs(self.qdot[1], self.initial[3])
+        A = A.subs([(self.q[i], self.initial[i]) for i in xrange(len(self.q))])
+        A = A.subs([(self.qdot[i], self.initial[i + len(self.qdot)]) for i in xrange(len(self.qdot))])
+        B = B.subs([(self.q[i], self.initial[i]) for i in xrange(len(self.q))])
+        B = B.subs([(self.qdot[i], self.initial[i + len(self.qdot)]) for i in xrange(len(self.qdot))])
         
-        A_exp2 = A_exp2.subs(self.q[0], self.initial[0])
-        A_exp2 = A_exp2.subs(self.q[1], self.initial[1])
-        A_exp2 = A_exp2.subs(self.qdot[0], self.initial[2])
-        A_exp2 = A_exp2.subs(self.qdot[1], self.initial[3])
+        print "A:" 
+        print A
+        print "B:"
+        print N(B)
+        
+        
+        A_exp1 = exp(t_e * A)        
+        #A_exp2 = exp(-t * A)        
+        
+        #A_exp1 = A_exp1.subs([(self.q[i], self.initial[i]) for i in xrange(len(self.q))])
+        #A_exp1 = A_exp1.subs([(self.qdot[i], self.initial[i + len(self.qdot)]) for i in xrange(len(self.qdot))])
+        #A_exp2 = A_exp2.subs([(self.q[i], self.initial[i]) for i in xrange(len(self.q))])
+        #A_exp2 = A_exp2.subs([(self.qdot[i], self.initial[i + len(self.qdot)]) for i in xrange(len(self.qdot))])
         
         print "calculate integral"
-        integral = integrate(A_exp2, (t, 0, t_e))   
+        #integral = integrate(A_exp2, (t, 0, t_e))
+        integral2 = self.test_power_series(A, t_e)
+        print "Integration took " + str(time.time() - t0) + " seconds"
+        #print integral
+        print "===================="
+        print "integral " + str(integral2)
         
-        A_exp1 = A_exp1.subs(self.q[0], self.initial[0])
-        A_exp1 = A_exp1.subs(self.q[1], self.initial[1])
-        A_exp1 = A_exp1.subs(self.qdot[0], self.initial[2])
-        A_exp1 = A_exp1.subs(self.qdot[1], self.initial[3])
-        
-        
-        
-        
-        
-        integral = integral.subs(self.q[0], self.initial[0])
-        integral = integral.subs(self.q[1], self.initial[1])
-        integral = integral.subs(self.qdot[0], self.initial[2])
-        integral = integral.subs(self.qdot[1], self.initial[3])
-        
-        inte_term = A_exp1 * integral      
+        B_term = A_exp1 * integral2 * B
+        print "===================="
+        print B_term
+        sleep      
         
         A_term = A_exp1
-        B_term = inte_term * B
         
-        print "Integration took " + str(time.time() - t0) + " seconds"
+        
+        
         f = A_term * x_0 + B_term * rho
         f = f.subs(t, 0.3)    
         print f
@@ -316,6 +331,7 @@ class Test:
         self.qdotstar = []
         self.rho = []
         self.rhostar = []
+        self.zeta = []
         for i in xrange(len(self.joint_names)):
             #if self.joint_types[i] == "revolute":            
             
@@ -324,7 +340,8 @@ class Test:
             symb_string_q_star = "thetas_star_[" + str(i) + "]"
             symb_string_q_dot_star = "dot_thetas_star_[" + str(i) + "]"
             symb_string_r = "rho[" + str(i) + "]"
-            symb_string_r_star = "rhos_star_[" + str(i) + "]"           
+            symb_string_r_star = "rhos_star_[" + str(i) + "]" 
+            symb_zeta = "zeta[" + str(i) + "]"          
             
             
             self.q.append(symbols(symb_string_q))
@@ -333,6 +350,7 @@ class Test:
             self.qstar.append(symbols(symb_string_q_star))
             self.qdotstar.append(symbols(symb_string_q_dot_star))
             self.rhostar.append(symbols(symb_string_r_star))
+            self.zeta.append(symbols(symb_zeta))
         inertia_pose = v2_double()
         robot.getLinkInertialPose(link_names, inertia_pose)
         self.inertial_poses = [[inertia_pose[i][j] for j in xrange(len(inertia_pose[i]))] for i in xrange(len(inertia_pose))]
@@ -362,7 +380,7 @@ class Test:
             if "void Integrate::setupSteadyStates() const {" in lines[i]:
                  idx1 = i + 1                 
                  breaking = True
-            elif "std::pair<Integrate::AB_funct, Integrate::AB_funct> Integrate::getClosestSteadyStateFunctions" in lines[i]:
+            elif "std::pair<Integrate::AB_funct, std::pair<Integrate::AB_funct, Integrate::AB_funct>> Integrate::getClosestSteadyStateFunctions" in lines[i]:
                 idx2 = i - 3                
                 if breaking:
                     break
@@ -384,6 +402,7 @@ class Test:
             line += "steady_states_.push_back(steady_state_" + str(i) +"); \n"
             line += "a_map_.insert(std::make_pair(" + str(i) + ", &Integrate::getA" + str(i) + ")); \n"
             line += "b_map_.insert(std::make_pair(" + str(i) + ", &Integrate::getB" + str(i) + ")); \n"
+            line += "v_map_.insert(std::make_pair(" + str(i) + ", &Integrate::getV" + str(i) + ")); \n"
             temp_lines.append(line)        
         del lines[idx1:idx2]
         idx = -1
@@ -406,7 +425,7 @@ class Test:
         idx2 = -1
         breaking = False
         for i in xrange(len(lines)):
-            if "MatrixXd Integrate::getA" in lines[i] or "MatrixXd Integrate::getB" in lines[i]:
+            if "MatrixXd Integrate::getA" in lines[i] or "MatrixXd Integrate::getB" in lines[i] or "MatrixXd Integrate::getV" in lines[i]:
                 idx1 = i                
                 breaking = True
             if "}" in lines[i] and breaking:
@@ -429,7 +448,7 @@ class Test:
         tmp_lines = []
         idxs = []
         for i in xrange(len(lines_header)):
-            if "MatrixXd getA" in lines_header[i] or "MatrixXd getB" in lines_header[i]:
+            if "MatrixXd getA" in lines_header[i] or "MatrixXd getB" in lines_header[i] or "MatrixXd getV" in lines_header[i]:
                 idxs.append(i)
         for i in xrange(len(lines_header)):
             app = True
@@ -453,7 +472,7 @@ class Test:
             if "void Integrate::setupSteadyStates() const {" in lines[i]:
                 idx1 = i + 1
                 breaking = True
-            elif "std::pair<Integrate::AB_funct, Integrate::AB_funct> Integrate::getClosestSteadyStateFunctions" in lines[i]:
+            elif "std::pair<Integrate::AB_funct, std::pair<Integrate::AB_funct, Integrate::AB_funct>> Integrate::getClosestSteadyStateFunctions" in lines[i]:
                 idx2 = i - 3                
                 if breaking:
                     break                     
@@ -517,7 +536,7 @@ class Test:
             for line in lines_header:
                 f.write(line)    
         
-    def get_dynamic_model(self, M, C, N, thetas, dot_thetas, rs): 
+    def get_dynamic_model(self, M, C, N, thetas, dot_thetas, rs, zetas): 
         print "Inverting inertia matrix"              
         t0 = time.time()
         #M_inv = M.inv("LU")
@@ -526,25 +545,33 @@ class Test:
         Thetas = Matrix([[thetas[i]] for i in xrange(len(thetas) - 1)])
         Dotthetas = Matrix([[dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
         Rs = Matrix([[rs[i]] for i in xrange(len(rs) - 1)])
+        Zetas = Matrix([[zetas[i]] for i in xrange(len(zetas) - 1)])
         print "Constructing non-linear differential equation"
         m_upper = Matrix([[dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
         m_lower = 0
         '''if self.simplifying:
             m_lower = trigsimp(-M_inv * trigsimp(C * Dotthetas + N) + M_inv * Rs)           
         else:'''
-        m_lower = M_inv * (Rs - C * Dotthetas - N)
+        m_lower = M_inv * ((Rs + Zetas) - C * Dotthetas - N)
         h = m_upper.col_join(m_lower)        
         return h, M_inv
     
-    def substitude_steady_states2(self, A, B, steady_states):
+    def substitude_steady_states2(self, A, B, V, steady_states):
         print steady_states                             
         for i in xrange(len(self.rho)):
             A = A.subs(self.rho[i], 0)
-            B = B.subs(self.rho[i], 0)                       
+            B = B.subs(self.rho[i], 0)
+            V = V.subs(self.rho[i], 0)
+        for i in xrange(len(self.zeta)):
+            A = A.subs(self.zeta[i], 0)
+            B = B.subs(self.zeta[i], 0)
+            V = V.subs(self.zeta[i], 0)                       
         for i in xrange(len(steady_states.keys())):
             A = A.subs(steady_states.keys()[i], steady_states[steady_states.keys()[i]])            
             B = B.subs(steady_states.keys()[i], steady_states[steady_states.keys()[i]])
-        return A, B             
+            V = V.subs(steady_states.keys()[i], steady_states[steady_states.keys()[i]])
+        
+        return A, B, V             
         
         A = zeros(len(self.q) - 1)
         print "Claculate A_low..."
@@ -567,9 +594,10 @@ class Test:
         
         A = f.jacobian([self.q[i] for i in xrange(len(self.q) - 1)]) 
         B = f.jacobian([self.qdot[i] for i in xrange(len(self.qdot) - 1)])
-        C = f.jacobian([self.rho[i] for i in xrange(len(self.rho) - 1)])        
+        C = f.jacobian([self.rho[i] for i in xrange(len(self.rho) - 1)])
+        D = f.jacobian([self.zeta[i] for i in xrange(len(self.zeta) - 1)])       
         A_r = A.row_join(B)        
-        return A_r, C
+        return A_r, C, D
         
     def calc_generalized_forces(self, 
                                 thetas, 

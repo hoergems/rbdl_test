@@ -32,8 +32,7 @@ namespace shared {
     	std::vector<double> getResult();
     	
     private:
-MatrixXd getB0(const state_type &x) const; 
-MatrixXd getA0(const state_type &x) const; 
+MatrixXd getV0(const state_type &x) const; 
 MatrixXd getB0(const state_type &x) const; 
 MatrixXd getA0(const state_type &x) const; 
     	
@@ -47,7 +46,7 @@ MatrixXd getA0(const state_type &x) const;
     	
     	std::pair<int, std::vector<double>> getClosestSteadyState(const state_type &x) const;
     	
-    	std::pair<Integrate::AB_funct, Integrate::AB_funct> getClosestSteadyStateFunctions(int &idx) const;
+    	std::pair<Integrate::AB_funct, std::pair<Integrate::AB_funct, Integrate::AB_funct>> getClosestSteadyStateFunctions(int &idx) const;
     	
     	mutable std::vector<double> rho;
     	
@@ -59,9 +58,11 @@ MatrixXd getA0(const state_type &x) const;
     	
     	mutable std::map<int, AB_funct> a_map_;
     	
-    	mutable std::map<int, AB_funct> b_map_; 
+    	mutable std::map<int, AB_funct> b_map_;
     	
-    	mutable std::pair<AB_funct, AB_funct> ab_functions_;
+    	mutable std::map<int, AB_funct> v_map_; 
+    	
+    	mutable std::pair<AB_funct, std::pair<AB_funct, AB_funct>> ab_functions_;
     	
     };
 
