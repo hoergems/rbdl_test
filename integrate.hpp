@@ -7,6 +7,7 @@
 #include <boost/numeric/odeint/integrate/integrate.hpp>
 #include <boost/numeric/odeint/stepper/runge_kutta4.hpp>
 #include <boost/numeric/odeint/integrate/integrate_const.hpp>
+#include <unsupported/Eigen/MatrixFunctions>
 
 
 namespace pl = std::placeholders;

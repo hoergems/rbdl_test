@@ -36,9 +36,9 @@ class InteTest:
         print B_Matr
         print V_Matr
         
+        result = A_Matr.dot(np.array([0.0, 0.0, 2.0, 0.0])) + B_Matr.dot(np.array([1.0, 0.0]))
         
-        
-        
+        print "result " + str(result)
         #integrate.doIntegration(current_state, controls, int_times)
         print "integration took " + str(time.time() - t0) + " seconds"
         #res = integrate.getResult()

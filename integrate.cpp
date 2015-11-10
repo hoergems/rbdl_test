@@ -46,7 +46,8 @@ std::vector<double> Integrate::getResult() {
 	return result_;
 }
 
-std::vector<double> Integrate::getProcessMatrices(std::vector<double> &x) const {	
+std::vector<double> Integrate::getProcessMatrices(std::vector<double> &x) const {
+	double t = 0.3;
 	std::pair<int, std::vector<double>> closest_steady_state = getClosestSteadyState(x);	
 	for (size_t i = 0; i < closest_steady_state.second.size(); i++) {
 		if (closest_steady_state.second[i] == -1) {
@@ -61,17 +62,20 @@ std::vector<double> Integrate::getProcessMatrices(std::vector<double> &x) const 
 	auto V = ab_functions.second.second;
 	MatrixXd AMatrix = (this->*A)(closest_steady_state.second);
 	MatrixXd BMatrix = (this->*B)(closest_steady_state.second);	
-	MatrixXd VMatrix = (this->*V)(closest_steady_state.second);	
-	cout << AMatrix << endl << endl;
-	cout << BMatrix << endl << endl;
-	cout << VMatrix << endl << endl;
+	MatrixXd VMatrix = (this->*V)(closest_steady_state.second);
+	
+	MatrixXd A_matrx1 = (t * AMatrix).exp();	
+	MatrixXd integral = power_series_(AMatrix, t, 20);
+	MatrixXd B_matrx = A_matrx1 * integral * BMatrix;
+	
+	
 	std::vector<double> res;
-	for (size_t i = 0; i < AMatrix.size(); i++) {
-		res.push_back(AMatrix(i));
+	for (size_t i = 0; i < A_matrx1.size(); i++) {
+		res.push_back(A_matrx1(i));
 	}
 	
-	for (size_t i = 0; i < BMatrix.size(); i++) {
-		res.push_back(BMatrix(i));
+	for (size_t i = 0; i < B_matrx.size(); i++) {
+		res.push_back(B_matrx(i));
 	}
 	
 	for (size_t i = 0; i < VMatrix.size(); i++) {
@@ -160,32 +164,17 @@ void Integrate::ode(const state_type &x , state_type &dxdt , double t) const {
 		control_state[i] = rho[i];
 		input_noise[i] = 0.0;
 	}
-	/**cout << "state:" << endl;
-	for (size_t i = 0; i < state.size(); i++) {
-		cout << state[i] << ", ";
-	}
-	cout << endl << endl;
-	
-	cout << "control_state " << endl;
-	for (size_t i = 0; i < control_state.size(); i++) {
-			cout << control_state[i] << ", ";
-		}
-	cout << endl;*/
-	
-	
 	
 	auto A = ab_functions_.first;
 	auto B = ab_functions_.second.first;
 	auto V = ab_functions_.second.second;	
 	res = (this->*A)(closest_steady_state_.second) * state + 
-		  (this->*B)(closest_steady_state_.second) * control_state;// +
+		  (this->*B)(closest_steady_state_.second) * control_state;
 		  (this->*V)(closest_steady_state_.second) * input_noise;	
  	dxdt.clear(); 	
 	for (size_t i = 0; i < x.size(); i++) {		
 		dxdt.push_back(res(i));		
 	}
-	
-    //sleep(10);
 }
 
 BOOST_PYTHON_MODULE(libintegrate) {
@@ -200,7 +189,7 @@ BOOST_PYTHON_MODULE(libintegrate) {
                         .def("getProcessMatrices", &Integrate::getProcessMatrices)
     ;
 }
-MatrixXd Integrate::getA0(const state_type &x) const{
+MatrixXd Integrate::getA0(const state_type &x) const{ 
 MatrixXd m(4, 4); 
 m(0, 0) = 0; 
 m(0, 1) = 0; 
@@ -217,7 +206,7 @@ m(2, 3) = -1.0*((1.0L/2.0L)*cos(x[1]) + 7.0L/25.0L)*(2500*cos(x[1]) + 3900)/((co
 m(3, 0) = 0; 
 m(3, 1) = 0; 
 m(3, 2) = -1.0*((1.0L/2.0L)*cos(x[1]) + 7.0L/25.0L)*(2500*cos(x[1]) + 3900)/((cos(x[1]) + 39.0L/25.0L)*(625*pow(cos(x[1]), 2) - 896)); 
-m(3, 3) = 1.0*(2500*cos(x[1]) + 3900)/(625*pow(cos(x[1]), 2) - 896);
+m(3, 3) = 1.0*(2500*cos(x[1]) + 3900)/(625*pow(cos(x[1]), 2) - 896); 
 return m; 
 
 } 
