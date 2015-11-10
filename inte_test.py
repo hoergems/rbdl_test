@@ -9,8 +9,8 @@ class InteTest:
         
         current_state = v_double()
         
-        controls[:] = [1.0, 0.0]
-        current_state[:] = [0.0, 0.0, 2.0, 0.0]
+        controls[:] = [1.0, 0.0, 0.0]
+        current_state[:] = [0.0, 0.0, 0.0, 2.0, 0.0, 0.0]
         
         t0 = 0.0
         te = 0.3
@@ -24,19 +24,20 @@ class InteTest:
         Matr_list = [A[i] for i in xrange(len(A))]
         
         A_list = np.array([Matr_list[i] for i in xrange(len(current_state)**2)])
-        B_list = np.array([Matr_list[i] for i in xrange(len(current_state)**2, (len(current_state)**2) + 2 * len(current_state))])
-        V_list = np.array([Matr_list[i] for i in xrange((len(current_state)**2) + 2 * len(current_state), 
-                                                        ((len(current_state)**2) + 4 * len(current_state)))])
+        B_list = np.array([Matr_list[i] for i in xrange(len(current_state)**2, (len(current_state)**2) + len(controls) * len(current_state))])
+        V_list = np.array([Matr_list[i] for i in xrange((len(current_state)**2) + len(controls) * len(current_state), 
+                                                        ((len(current_state)**2) + 2 * len(controls) * len(current_state)))])
+        
         
         A_Matr = A_list.reshape(len(current_state), len(current_state)).T
         B_Matr = B_list.reshape(len(current_state) / 2, len(current_state)).T
         V_Matr = V_list.reshape(len(current_state) / 2, len(current_state)).T
         
-        print A_Matr
-        print B_Matr
-        print V_Matr
+        #print A_Matr
+        #print B_Matr
+        #print V_Matr
         
-        result = A_Matr.dot(np.array([0.0, 0.0, 2.0, 0.0])) + B_Matr.dot(np.array([1.0, 0.0]))
+        result = A_Matr.dot(np.array([0.0, 0.0, 0.0, 2.0, 0.0, 0.0])) + B_Matr.dot(np.array([1.0, 0.0, 0.0]))
         
         print "result " + str(result)
         #integrate.doIntegration(current_state, controls, int_times)
