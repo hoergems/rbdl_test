@@ -22,8 +22,9 @@ class Test:
                     [9.81]])       
         """
         Get the Jacobians of the links expressed in the robot's base frame
-        """
+        """        
         print "Calculating Jacobian matrices"
+        t_start = time.time()
         Jvs, Ocs = self.get_link_jacobians(self.joint_origins, self.inertial_poses, self.joint_axis, self.q)
         #print Jvs
         #print Ocs
@@ -49,37 +50,54 @@ class Test:
                                          viscous)        
         if self.simplifying:      
             N = trigsimp(N)        
-        print "Get dynamic model"        
-        f, M_inv = self.get_dynamic_model(M, C, N, self.q, self.qdot, self.rho, self.zeta)
+        print "Inverting inertia matrix..."
+        t0 = time.time()
+        M_inv = M.inv()
+        print "Inversion took " + str(time.time() - t0) + " seconds"        
+        #f, M_inv = self.get_dynamic_model(M, C, N, self.q, self.qdot, self.rho, self.zeta)
         print "Build taylor approximation" 
-        steady_states = self.get_steady_states(f)
-        print "Get partial derivatives"
-        A, B, V = self.partial_derivatives2(f)
-        if self.simplifying:
+        steady_states = self.get_steady_states()
+        print "Get partial derivatives"           
+        #A, B, V = self.partial_derivatives2(f)        
+        A, B, V = self.partial_derivatives(M_inv, C, N)        
+        
+        '''if self.simplifying:
             A = simplify(A)
             B = simplify(B)
-            V = simplify(V)       
+            V = simplify(V)'''       
         print "Clean cpp code"
         self.clean_cpp_code()
         print "Gen cpp code"
         self.gen_cpp_code_steady_states(steady_states) 
         print "Steady states code generated"
         print "Generate cpp code for linearized model..."
-        self.initial = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        self.input = [1.0, 0.0, 0.0]   
+        self.initial = [0.0, 0.0, 0.0, 0.0]
+        self.input = [1.0, 0.0]   
         for i in xrange(len(steady_states)):
-            A, B, V = self.substitude_steady_states2(A, B, V, steady_states[i])
+            A, B, V = self.substitude_steady_states2(A, B, V, steady_states[i])            
             #self.test_ode(A, B, steady_states[i]) 
             #self.test_int(A, B, steady_states[i])
             self.gen_cpp_code2(A, "A" + str(i))
             self.gen_cpp_code2(B, "B" + str(i))
             self.gen_cpp_code2(V, "V" + str(i))
-            
+        print "Building model took " + str(time.time() - t_start) + " seconds"  
         if buildcpp:
             print "Build c++ code..."
             cmd = "cd build && cmake .. && make -j8"           
             os.system(cmd)
         print "Done"
+        
+    def su(self, A1, A2):
+        for i in xrange(len(self.q) - 1):
+            A1 = A1.subs(self.q[i], 0.0)
+            A2 = A2.subs(self.q[i], 0.0)
+            
+            A1 = A1.subs(self.qdot[i], 0.0)
+            A2 = A2.subs(self.qdot[i], 0.0)
+        print A1
+        print "=============="
+        print A2
+        sleep
         
     def test_ode(self, A, B, steady_state):
         self.A = A
@@ -127,38 +145,28 @@ class Test:
         
         return [sol[i] for i in xrange(len(sol))]
     
-    def test_power_series(self, A, T):
-        #series = T * (-A*T / mp.factorial(2) + power(-A*T, 3) / mp.factorial(3) + power(-A*T, 3) / mp.factorial(4))
-               
-        series =  T* (eye(4) +
-                      ((-A*T) / mp.factorial(2)) + 
-                      (-A*T)**2 / mp.factorial(3) + 
-                      (-A*T)**3 / mp.factorial(4) +
-                      (-A*T)**4 / mp.factorial(5) +
-                      (-A*T)**5 / mp.factorial(6) +
-                      (-A*T)**6 / mp.factorial(7) +
-                      (-A*T)**7 / mp.factorial(8) +
-                      (-A*T)**8 / mp.factorial(9) +
-                      (-A*T)**9 / mp.factorial(10) +
-                      (-A*T)**10 / mp.factorial(11) +
-                      (-A*T)**11 / mp.factorial(12) +
-                      (-A*T)**12 / mp.factorial(13) +
-                      (-A*T)**13 / mp.factorial(14))        
-        return series
-                
+    def test_power_series(self, A, T, depth=15):
+        A_t = -A * T
+        A_i = A_t
+        series = eye(4)                
+        for i in xrange(1, depth):
+            print i
+            series = series + A_i / mp.factorial(i + 1)
+            A_i = A_i * A_t        
+        return T * series        
         
-    def test_int(self, A, B, steady_state):
+    def test_int(self, A, B, steady_state):        
         x_0 = Matrix([[self.initial[i]] for i in xrange(len(self.initial))])
         rho = Matrix([[self.input[i]] for i in xrange(len(self.input))])
         t = symbols("t") 
-        t_e = 0.03        
+        t_e = 0.3        
         print "Calc matrix exponentials"
-        t0 = time.time()
         
-        A = A.subs([(self.q[i], self.initial[i]) for i in xrange(len(self.q))])
-        A = A.subs([(self.qdot[i], self.initial[i + len(self.qdot)]) for i in xrange(len(self.qdot))])
-        B = B.subs([(self.q[i], self.initial[i]) for i in xrange(len(self.q))])
-        B = B.subs([(self.qdot[i], self.initial[i + len(self.qdot)]) for i in xrange(len(self.qdot))])
+        
+        A = A.subs([(self.q[i], self.initial[i]) for i in xrange(len(self.q) - 1)])
+        A = A.subs([(self.qdot[i], self.initial[i + len(self.qdot) - 1]) for i in xrange(len(self.qdot) - 1)])
+        B = B.subs([(self.q[i], self.initial[i]) for i in xrange(len(self.q) - 1)])
+        B = B.subs([(self.qdot[i], self.initial[i + len(self.qdot) - 1]) for i in xrange(len(self.qdot) - 1)])
         
         print "A:" 
         print A
@@ -167,7 +175,7 @@ class Test:
         
         
         A_exp1 = exp(t_e * A)        
-        #A_exp2 = exp(-t * A)        
+        A_exp2 = exp(-t * A)        
         
         #A_exp1 = A_exp1.subs([(self.q[i], self.initial[i]) for i in xrange(len(self.q))])
         #A_exp1 = A_exp1.subs([(self.qdot[i], self.initial[i + len(self.qdot)]) for i in xrange(len(self.qdot))])
@@ -176,30 +184,20 @@ class Test:
         
         print "calculate integral"
         #integral = integrate(A_exp2, (t, 0, t_e))
-        integral2 = self.test_power_series(A, t_e)
+        t0 = time.time()
+        integral = self.test_power_series(A, t_e, 15)
         print "Integration took " + str(time.time() - t0) + " seconds"
         #print integral
         print "===================="
-        print "integral " + str(integral2)
-        
-        B_term = A_exp1 * integral2 * B
-        print "===================="
-        print B_term
-        sleep      
-        
-        A_term = A_exp1
-        
-        
-        
-        f = A_term * x_0 + B_term * rho
-        f = f.subs(t, 0.3)    
+        print "integral " + str(integral)
+        f = A_exp1 * x_0 + A_exp1 * integral * B * rho
+        f = f.subs(t, t_e)    
         print f
         print N(f)
+        print "factorial " + str(mp.factorial(4))
         sleep       
         
-    def get_steady_states(self, f):        
-        for i in xrange(len(self.rho)):
-            f = f.subs(self.rho[i], 0)
+    def get_steady_states(self):
         steady_states = []             
         if len(self.q) == 3:
             if self.joint_origins[0][3] != 0.0:
@@ -556,8 +554,7 @@ class Test:
         h = m_upper.col_join(m_lower)        
         return h, M_inv
     
-    def substitude_steady_states2(self, A, B, V, steady_states):
-        print steady_states                             
+    def substitude_steady_states2(self, A, B, V, steady_states):                            
         for i in xrange(len(self.rho)):
             A = A.subs(self.rho[i], 0)
             B = B.subs(self.rho[i], 0)
@@ -586,16 +583,45 @@ class Test:
         B = B.col_join(C1)
         return f, A, B
     
+    def partial_derivatives(self, M_inv, C, N):        
+        r = Matrix([[self.rho[i]] for i in xrange(len(self.rho) - 1)])
+        x1 = Matrix([[self.q[i]] for i in xrange(len(self.q) - 1)])
+        x2 = Matrix([[self.qdot[i]] for i in xrange(len(self.qdot) - 1)])
+        z = Matrix([[self.zeta[i]] for i in xrange(len(self.zeta) - 1)])        
+        A1 = M_inv * r
+        A2 = M_inv * z
+        A3 = M_inv * (-C * x2)
+        A4 = M_inv * (-N)
+        
+        A1_x1 = A1.jacobian([self.q[i] for i in xrange(len(self.q) - 1)])
+        A2_x1 = A2.jacobian([self.q[i] for i in xrange(len(self.q) - 1)])
+        A3_x1 = A3.jacobian([self.q[i] for i in xrange(len(self.q) - 1)])
+        A4_x1 = A4.jacobian([self.q[i] for i in xrange(len(self.q) - 1)])        
+        
+        A3_x2 = A3.jacobian([self.qdot[i] for i in xrange(len(self.qdot) - 1)])
+        A4_x2 = A4.jacobian([self.qdot[i] for i in xrange(len(self.qdot) - 1)])
+        
+        A1_r = A1.jacobian([self.rho[i] for i in xrange(len(self.rho) - 1)])
+        A2_z = A2.jacobian([self.zeta[i] for i in xrange(len(self.rho) - 1)])
+        
+        A = zeros(len(self.q) - 1).col_join(A1_x1 + A2_x1 + A3_x1 + A4_x1)
+        B = eye(len(self.q) - 1).col_join(A3_x2 + A4_x2)
+        A = A.row_join(B)
+        
+        B = zeros(len(self.q) - 1).col_join(A1_r)
+        C = zeros(len(self.q) - 1).col_join(A2_z)
+        return A, B, C
+    
     def partial_derivatives2(self,
                              f):
-        
-        dot_q = Matrix([[self.q[i]] for i in xrange(len(self.q) - 1)])
-        r = Matrix([[self.rho[i]] for i in xrange(len(self.rho) - 1)]) 
-        
         A = f.jacobian([self.q[i] for i in xrange(len(self.q) - 1)]) 
+        print "Calculated A"
         B = f.jacobian([self.qdot[i] for i in xrange(len(self.qdot) - 1)])
+        print "Calculated B"
         C = f.jacobian([self.rho[i] for i in xrange(len(self.rho) - 1)])
-        D = f.jacobian([self.zeta[i] for i in xrange(len(self.zeta) - 1)])       
+        print "Calculated C"
+        D = f.jacobian([self.zeta[i] for i in xrange(len(self.zeta) - 1)])
+        print "Calculated D"       
         A_r = A.row_join(B)        
         return A_r, C, D
         

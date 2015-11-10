@@ -27,6 +27,8 @@ namespace shared {
     			            std::vector<double> &control,
     			            std::vector<double> &int_times) const;
     	
+    	std::vector<double> getProcessMatrices(std::vector<double> &x) const;
+    	
     	void ode(const state_type &x , state_type &dxdt , double t) const;
     	
     	std::vector<double> getResult();
@@ -41,6 +43,10 @@ MatrixXd getA0(const state_type &x) const;
         
         // A member function pointer for the above declared member function type
     	typedef ABFuncType Integrate::* AB_funct;
+    	
+    	MatrixXd power_series_(MatrixXd &m, double t, int depth) const;
+    	
+    	double factorial_(int num) const;
     	
     	void setupSteadyStates() const;
     	
